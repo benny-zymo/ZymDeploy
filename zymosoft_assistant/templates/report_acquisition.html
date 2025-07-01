@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #009967;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #009967;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #ff0000;
+        }
+        .warning {
+            color: #ffc107;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #009967;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .graph-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .graph-container img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <p>Date: {{ date }}</p>
+    </div>
+    
+    <div class="section">
+        <h2>Informations sur l'acquisition</h2>
+        <table>
+            <tr>
+                <th>Paramètre</th>
+                <th>Valeur</th>
+            </tr>
+            <tr>
+                <td>Type de plaque</td>
+                <td>{{ plate_type }}</td>
+            </tr>
+            <tr>
+                <td>Mode d'acquisition</td>
+                <td>{{ acquisition_mode }}</td>
+            </tr>
+            <tr>
+                <td>Dossier de résultats</td>
+                <td>{{ analysis.folder }}</td>
+            </tr>
+            <tr>
+                <td>Statut</td>
+                <td>
+                    {% if acquisition_valid %}
+                    <span class="success">✓ Acquisition valide</span>
+                    {% else %}
+                    <span class="error">✗ Acquisition non valide</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    {% if statistics %}
+    <div class="section">
+        <h2>Statistiques</h2>
+        <table>
+            <tr>
+                <th>Paramètre</th>
+                <th>Valeur</th>
+            </tr>
+            <tr>
+                <td>Pente</td>
+                <td>{{ statistics.slope|round(4) }}</td>
+            </tr>
+            <tr>
+                <td>Ordonnée à l'origine</td>
+                <td>{{ statistics.intercept|round(4) }}</td>
+            </tr>
+            <tr>
+                <td>Coefficient de détermination (R²)</td>
+                <td>{{ statistics.r2|round(4) }}</td>
+            </tr>
+            <tr>
+                <td>Nombre de valeurs aberrantes</td>
+                <td>{{ statistics.outliers_count }}</td>
+            </tr>
+            <tr>
+                <td>Pourcentage de valeurs aberrantes</td>
+                <td>{{ statistics.outliers_percentage|round(2) }}%</td>
+            </tr>
+        </table>
+    </div>
+    {% endif %}
+    
+    {% if graphs %}
+    <div class="section">
+        <h2>Graphiques</h2>
+        {% for graph in graphs %}
+        <div class="graph-container">
+            <img src="{{ graph }}" alt="Graphique d'analyse">
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    {% if errors %}
+    <div class="section">
+        <h2>Erreurs détectées</h2>
+        <ul>
+            {% for error in errors %}
+            <li class="error">{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if warnings %}
+    <div class="section">
+        <h2>Avertissements</h2>
+        <ul>
+            {% for warning in warnings %}
+            <li class="warning">{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <div class="footer">
+        <p>Rapport généré automatiquement par l'Assistant d'installation ZymoSoft</p>
+    </div>
+</body>
+</html>
