@@ -1,0 +1,12 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "jinja2>=3.1.6",
+    "matplotlib>=3.10.3",
+    "pandas>=2.3.0",
+    "pyqt5>=5.15.11",
+    "reportlab>=4.4.2",
+]
