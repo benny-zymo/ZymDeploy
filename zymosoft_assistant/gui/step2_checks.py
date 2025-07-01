@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
                              QPushButton, QFrame, QFileDialog, QMessageBox,
                              QProgressBar, QTabWidget, QWidget, QScrollArea,
                              QTableWidget, QTableWidgetItem, QHeaderView, QTreeWidget, QTreeWidgetItem, QGroupBox)
-from PyQt5.QtCore import Qt, pyqtSignal, QVariant
+from PyQt5.QtCore import Qt, pyqtSignal, QVariant, QObject
 
 from zymosoft_assistant.utils.constants import COLOR_SCHEME, ZYMOSOFT_BASE_PATH
 from zymosoft_assistant.utils.helpers import find_zymosoft_installation
@@ -23,6 +23,14 @@ from zymosoft_assistant.core.report_generator import ReportGenerator
 from .step_frame import StepFrame
 
 logger = logging.getLogger(__name__)
+
+class Step2Helper(QObject):
+    """
+    Classe d'aide pour la communication thread-safe
+    """
+    update_progress_signal = pyqtSignal(int, str)
+    display_results_signal = pyqtSignal()
+    handle_error_signal = pyqtSignal(str)
 
 class Step2Checks(StepFrame):
     """
@@ -57,6 +65,12 @@ class Step2Checks(StepFrame):
         self.progress_bar = None
         self.progress_label = None
         self.results_notebook = None
+
+        # Helper pour la communication thread-safe
+        self.helper = Step2Helper()
+        self.helper.update_progress_signal.connect(self._do_update_progress)
+        self.helper.display_results_signal.connect(self._do_display_results)
+        self.helper.handle_error_signal.connect(self._do_handle_check_error)
 
         super().__init__(parent, main_window)
         logger.info("Étape 2 initialisée")
@@ -179,6 +193,11 @@ class Step2Checks(StepFrame):
         self.errors_frame = QWidget()
         self.errors_layout = QVBoxLayout(self.errors_frame)
         self.results_notebook.addTab(self.errors_frame, "Erreurs et avertissements")
+
+        # Onglet pour le résumé des vérifications
+        self.summary_frame = QWidget()
+        self.summary_layout = QVBoxLayout(self.summary_frame)
+        self.results_notebook.addTab(self.summary_frame, "Résumé")
 
         # Statut global
         status_frame = QFrame()
@@ -336,9 +355,9 @@ class Step2Checks(StepFrame):
             value: Valeur de progression (0-100)
             message: Message à afficher
         """
-        # Note: In a real application, you should use signals and slots for thread safety
-        # For simplicity, we're using a direct call
-        self._do_update_progress(value, message)
+        # Utiliser le signal pour s'assurer que la mise à jour de l'interface
+        # est effectuée dans le thread principal
+        self.helper.update_progress_signal.emit(value, message)
 
     def _do_update_progress(self, value, message):
         """
@@ -358,6 +377,17 @@ class Step2Checks(StepFrame):
         Args:
             error_message: Message d'erreur
         """
+        # Utiliser le signal pour s'assurer que la gestion des erreurs
+        # est effectuée dans le thread principal
+        self.helper.handle_error_signal.emit(error_message)
+
+    def _do_handle_check_error(self, error_message):
+        """
+        Effectue la gestion des erreurs dans le thread principal
+
+        Args:
+            error_message: Message d'erreur
+        """
         QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue lors des vérifications:\n{error_message}")
         self.progress_label.setText(f"Erreur: {error_message}")
         self.check_button.setEnabled(True)
@@ -373,6 +403,7 @@ class Step2Checks(StepFrame):
         self._clear_layout(self.plate_config_ini_layout)
         self._clear_layout(self.zymocube_ctrl_ini_layout)
         self._clear_layout(self.errors_layout)
+        self._clear_layout(self.summary_layout)
 
         # Réinitialiser le statut
         self.status_label.setText("En attente des vérifications...")
@@ -399,9 +430,9 @@ class Step2Checks(StepFrame):
         Met à jour l'interface avec les résultats des vérifications
         Note: Cette méthode est appelée depuis un thread séparé et doit être thread-safe
         """
-        # Note: In a real application, you should use signals and slots for thread safety
-        # For simplicity, we're using a direct call
-        self._do_display_results()
+        # Utiliser le signal pour s'assurer que la mise à jour de l'interface
+        # est effectuée dans le thread principal
+        self.helper.display_results_signal.emit()
 
     def _do_display_results(self):
         """
@@ -427,6 +458,10 @@ class Step2Checks(StepFrame):
         self._display_plate_config_ini_results()
         self._display_zymocube_ctrl_ini_results()
         self._display_errors_warnings()
+        self._display_summary_results()
+
+        # Sélectionner l'onglet de résumé
+        self.results_notebook.setCurrentWidget(self.summary_frame)
 
         # Réactiver les boutons
         self.check_button.setEnabled(True)
@@ -570,6 +605,76 @@ class Step2Checks(StepFrame):
             for key, value in zymocube_ctrl_ini_results["values"].items():
                 item = QTreeWidgetItem([key, str(value)])
                 tree.addTopLevelItem(item)
+
+    def _display_summary_results(self):
+        """
+        Affiche un résumé de tous les résultats des vérifications avec des indicateurs de statut
+        """
+        # Titre
+        title_label = QLabel("Résumé des vérifications")
+        title_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        self.summary_layout.addWidget(title_label)
+
+        # Tableau des résultats
+        table = QTableWidget()
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels(["Catégorie", "Statut", "Détails"])
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.summary_layout.addWidget(table)
+
+        # Ajouter les résultats au tableau
+        categories = [
+            ("Structure d'installation", self.check_results.get("structure", {}).get("installation_valid", False)),
+            ("Config.ini", self.check_results.get("config_ini", {}).get("valid", False)),
+            ("PlateConfig.ini", self.check_results.get("plate_config_ini", {}).get("valid", False)),
+            ("ZymoCubeCtrl.ini", self.check_results.get("zymocube_ctrl_ini", {}).get("valid", False)),
+            ("Fichiers requis", self.check_results.get("files", {}).get("all_files_valid", False))
+        ]
+
+        # Compter les erreurs et avertissements
+        errors_count = 0
+        warnings_count = 0
+        for key, value in self.check_results.items():
+            if isinstance(value, dict):
+                if "errors" in value:
+                    errors_count += len(value["errors"])
+                if "warnings" in value:
+                    warnings_count += len(value["warnings"])
+
+        # Ajouter une ligne pour les erreurs et avertissements
+        categories.append(("Erreurs et avertissements", errors_count == 0, f"{errors_count} erreur(s), {warnings_count} avertissement(s)"))
+
+        # Définir le nombre de lignes du tableau
+        table.setRowCount(len(categories))
+
+        # Remplir le tableau
+        for i, (category, is_valid, *details) in enumerate(categories):
+            # Catégorie
+            category_item = QTableWidgetItem(category)
+            table.setItem(i, 0, category_item)
+
+            # Statut
+            status_text = "✓" if is_valid else "✗"
+            status_item = QTableWidgetItem(status_text)
+            status_item.setTextAlignment(Qt.AlignCenter)
+            if is_valid:
+                status_item.setForeground(Qt.green)
+            else:
+                status_item.setForeground(Qt.red)
+            table.setItem(i, 1, status_item)
+
+            # Détails
+            details_text = details[0] if details else ""
+            details_item = QTableWidgetItem(details_text)
+            table.setItem(i, 2, details_item)
+
+        # Statut global
+        global_status_label = QLabel(f"Statut global: {'✓ Valide' if self.installation_valid else '✗ Non valide'}")
+        global_status_label.setStyleSheet(f"font-size: 14pt; font-weight: bold; color: {COLOR_SCHEME['success'] if self.installation_valid else COLOR_SCHEME['error']};")
+        global_status_label.setAlignment(Qt.AlignCenter)
+        self.summary_layout.addWidget(global_status_label)
 
     def _display_errors_warnings(self):
         """
