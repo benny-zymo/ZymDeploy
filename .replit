@@ -1,0 +1,8 @@
+modules = ["python-3.12", "web"]
+run = "python ./zymosoft_assistant/main.py"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "cd zymosoft_assistant" ,"python main.py"]
