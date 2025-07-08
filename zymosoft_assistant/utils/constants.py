@@ -23,7 +23,8 @@ COLOR_SCHEME = {
     'primary_hover': '#007d54',
     'primary_pressed': '#006b47',
     'light_background' : '#f0f0f0',
-    'background': '#f5f5f5',
+    'disabled' : '#cccccc',
+    'background': 'white',
     'surface': '#ffffff',
     'text': '#333333',
     'text_secondary': '#666666',
@@ -223,9 +224,6 @@ ZYMOSOFT_STRUCTURE = {
         'files': [
             {'name': 'ZymoCubeCtrl.exe', 'required': True},
             {'name': 'ZymoSoft.exe', 'required': True},
-            {'name': 'Config.ini', 'required': True},
-            {'name': 'PlateConfig.ini', 'required': True},
-            {'name': 'ZymoCubeCtrl.ini', 'required': True}
         ],
         'dirs': [
             {'name': 'workers', 'required': True}
@@ -236,7 +234,10 @@ ZYMOSOFT_STRUCTURE = {
         'dirs': [
             {'name': 'Interf', 'required': True},
             {'name': 'Reflecto', 'required': True}
-        ]
+        ],
+        'files' : [ {'name': 'Config.ini', 'required': True},
+            {'name': 'PlateConfig.ini', 'required': True},
+            {'name': 'ZymoCubeCtrl.ini', 'required': True}]
     },
     'Resultats': {
         'required': True

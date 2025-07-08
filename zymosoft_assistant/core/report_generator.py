@@ -15,7 +15,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+from reportlab.lib.units import inch, cm
 from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,57 @@ class ReportGenerator:
         logger.info(f"Générateur de rapports initialisé avec templates: {self.templates_dir}, "
                    f"sortie: {self.output_dir}")
 
+    def _create_wrapped_table(self, data, col_widths, header_color=colors.HexColor("#009967")):
+        """
+        Crée un tableau avec un wrapping de texte amélioré pour éviter les débordements
+
+        Args:
+            data: Données du tableau (liste de listes)
+            col_widths: Largeurs des colonnes
+            header_color: Couleur de l'en-tête (par défaut: vert ZymoSoft)
+
+        Returns:
+            Table: Objet Table avec style appliqué
+        """
+        styles = getSampleStyleSheet()
+        normal_style = styles['Normal']
+
+        # Convertir les cellules en Paragraph pour permettre le wrapping
+        processed_data = []
+        for row_idx, row in enumerate(data):
+            processed_row = []
+            for col_idx, cell in enumerate(row):
+                # Si c'est déjà un Paragraph, on le garde tel quel
+                if isinstance(cell, Paragraph):
+                    processed_row.append(cell)
+                else:
+                    # Sinon, on le convertit en Paragraph
+                    processed_row.append(Paragraph(str(cell), normal_style))
+            processed_data.append(processed_row)
+
+        # Créer le tableau avec les données traitées
+        table = Table(processed_data, colWidths=col_widths)
+
+        # Appliquer un style avec padding supplémentaire et wrapping amélioré
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), header_color),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('WORDWRAP', (0, 0), (-1, -1), True),
+            # Ajouter plus de padding pour éviter les débordements
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+        ]))
+
+        return table
+
     def generate_step2_report(self, checks: Dict[str, Any]) -> str:
         """
         Génère un rapport PDF pour l'étape 2 (vérifications pré-validation)
@@ -102,6 +153,12 @@ class ReportGenerator:
             parent=styles['Heading2'],
             textColor=colors.HexColor("#009967"),
             spaceAfter=6
+        )
+        subheading_style = ParagraphStyle(
+            'Heading3',
+            parent=styles['Heading3'],
+            textColor=colors.HexColor("#009967"),
+            spaceAfter=4
         )
         normal_style = styles['Normal']
 
@@ -142,38 +199,133 @@ class ReportGenerator:
         # Structure de l'installation
         elements.append(Paragraph("Structure de l'installation", heading_style))
 
-        # Tableau des vérifications
+        # Tableau des vérifications de structure
+        structure_results = checks.get("structure", {})
         data = [["Élément", "Statut"]]
 
         # Ajout des éléments vérifiés au tableau
-        check_items = [
-            ("bin_exists", "Dossier bin/"),
-            ("etc_exists", "Dossier etc/"),
-            ("resultats_exists", "Dossier Resultats/"),
-            ("zymocubectrl_exists", "ZymoCubeCtrl.exe"),
-            ("zymosoft_exists", "ZymoSoft.exe"),
-            ("workers_exists", "Dossier workers/")
-        ]
-
-        for check_key, check_label in check_items:
-            if check_key in checks:
-                status = "✓" if checks[check_key] else "✗"
-                data.append([check_label, status])
+        for key, value in structure_results.items():
+            if key != "installation_valid":
+                item_text = key.replace("_exists", "").replace("_", " ").capitalize()
+                status = "✓" if value else "✗"
+                status_color = "green" if value else "red"
+                data.append([item_text, f"<font color='{status_color}'>{status}</font>"])
 
         # Création du tableau
         if len(data) > 1:  # S'il y a des données en plus de l'en-tête
-            table = Table(data, colWidths=[4*inch, 1*inch])
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ]))
+            table = self._create_wrapped_table(data, [4*inch, 1*inch])
             elements.append(table)
+            elements.append(Spacer(1, 0.15*inch))
+
+        # Config.ini
+        config_ini_results = checks.get("config_ini", {})
+        if config_ini_results:
+            elements.append(Paragraph("Vérification de Config.ini", heading_style))
+
+            # Statut
+            status_text = "✓ Valide" if config_ini_results.get("config_valid", False) else "✗ Non valide"
+            status_color = "green" if config_ini_results.get("config_valid", False) else "red"
+            elements.append(Paragraph(f"Statut: <font color='{status_color}'>{status_text}</font>", normal_style))
+            elements.append(Spacer(1, 0.1*inch))
+
+            # Valeurs
+            if "values" in config_ini_results and config_ini_results["values"]:
+                elements.append(Paragraph("Valeurs", subheading_style))
+                data = [["Paramètre", "Valeur"]]
+
+                for key, value in config_ini_results["values"].items():
+                    data.append([key, str(value)])
+
+                table = self._create_wrapped_table(data, [2*inch, 3*inch])
+                elements.append(table)
+                elements.append(Spacer(1, 0.15*inch))
+
+        # PlateConfig.ini
+        plate_config_ini_results = checks.get("plate_config_ini", {})
+        if plate_config_ini_results:
+            elements.append(Paragraph("Vérification de PlateConfig.ini", heading_style))
+
+            # Statut
+            status_text = "✓ Valide" if plate_config_ini_results.get("config_valid", False) else "✗ Non valide"
+            status_color = "green" if plate_config_ini_results.get("config_valid", False) else "red"
+            elements.append(Paragraph(f"Statut: <font color='{status_color}'>{status_text}</font>", normal_style))
+            elements.append(Spacer(1, 0.1*inch))
+
+            # Types de plaques
+            if "plate_types" in plate_config_ini_results and plate_config_ini_results["plate_types"]:
+                elements.append(Paragraph("Types de plaques", subheading_style))
+                data = [["Nom", "Configuration"]]
+
+                for plate in plate_config_ini_results["plate_types"]:
+                    plate_name = plate.get("name", "")
+                    plate_config = plate.get("config", "")
+                    data.append([plate_name, plate_config])
+
+                table = self._create_wrapped_table(data, [2.5*inch, 2.5*inch])
+                elements.append(table)
+                elements.append(Spacer(1, 0.15*inch))
+
+        # ZymoCubeCtrl.ini
+        zymocube_ctrl_ini_results = checks.get("zymocube_ctrl_ini", {})
+        if zymocube_ctrl_ini_results:
+            elements.append(Paragraph("Vérification de ZymoCubeCtrl.ini", heading_style))
+
+            # Statut
+            status_text = "✓ Valide" if zymocube_ctrl_ini_results.get("config_valid", False) else "✗ Non valide"
+            status_color = "green" if zymocube_ctrl_ini_results.get("config_valid", False) else "red"
+            elements.append(Paragraph(f"Statut: <font color='{status_color}'>{status_text}</font>", normal_style))
+            elements.append(Spacer(1, 0.1*inch))
+
+            # Valeurs
+            if "values" in zymocube_ctrl_ini_results and zymocube_ctrl_ini_results["values"]:
+                elements.append(Paragraph("Valeurs", subheading_style))
+                data = [["Paramètre", "Valeur"]]
+
+                for key, value in zymocube_ctrl_ini_results["values"].items():
+                    data.append([key, str(value)])
+
+                table = self._create_wrapped_table(data, [2*inch, 3*inch])
+                elements.append(table)
+                elements.append(Spacer(1, 0.15*inch))
+
+            # Types de plaques
+            if "plate_types" in zymocube_ctrl_ini_results and zymocube_ctrl_ini_results["plate_types"]:
+                elements.append(Paragraph("Types de plaques", subheading_style))
+                data = [["Type de plaque"]]
+
+                for plate_type in zymocube_ctrl_ini_results["plate_types"]:
+                    data.append([plate_type])
+
+                table = self._create_wrapped_table(data, [5*inch])
+                elements.append(table)
+                elements.append(Spacer(1, 0.15*inch))
+
+        # Validation des fichiers
+        files_results = checks.get("files", {})
+        if files_results:
+            elements.append(Paragraph("Validation des fichiers", heading_style))
+
+            # Statut
+            status_text = "✓ Valide" if files_results.get("files_valid", False) else "✗ Non valide"
+            status_color = "green" if files_results.get("files_valid", False) else "red"
+            elements.append(Paragraph(f"Statut: <font color='{status_color}'>{status_text}</font>", normal_style))
+            elements.append(Spacer(1, 0.1*inch))
+
+            # Fichiers requis
+            if "required_files" in files_results and files_results["required_files"]:
+                elements.append(Paragraph("Fichiers requis", subheading_style))
+                data = [["Fichier", "Présent"]]
+
+                for file_info in files_results["required_files"]:
+                    file_path = file_info.get("path", "")
+                    file_exists = file_info.get("exists", False)
+                    status = "✓" if file_exists else "✗"
+                    status_color = "green" if file_exists else "red"
+                    data.append([file_path, f"<font color='{status_color}'>{status}</font>"])
+
+                table = self._create_wrapped_table(data, [4*inch, 1*inch])
+                elements.append(table)
+                elements.append(Spacer(1, 0.15*inch))
 
         # Pied de page
         elements.append(Spacer(1, 0.5*inch))
@@ -240,17 +392,7 @@ class ReportGenerator:
             ["Statut", "✓ Acquisition valide" if analysis.get("valid", False) else "✗ Acquisition non valide"]
         ]
 
-        table = Table(data, colWidths=[2.5*inch, 3.5*inch])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
+        table = self._create_wrapped_table(data, [2.5*inch, 3.5*inch])
         elements.append(table)
         elements.append(Spacer(1, 0.15*inch))
 
@@ -268,17 +410,7 @@ class ReportGenerator:
                 ["Pourcentage de valeurs aberrantes", f"{round(statistics.get('outliers_percentage', 0), 2)}%"]
             ]
 
-            stats_table = Table(stats_data, colWidths=[3*inch, 3*inch])
-            stats_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ]))
+            stats_table = self._create_wrapped_table(stats_data, [3*inch, 3*inch])
             elements.append(stats_table)
             elements.append(Spacer(1, 0.15*inch))
 
@@ -380,17 +512,7 @@ class ReportGenerator:
             ["Identifiant d'installation", full_data.get("installation_id", "")]
         ]
 
-        client_table = Table(client_data, colWidths=[2.5*inch, 3.5*inch])
-        client_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
+        client_table = self._create_wrapped_table(client_data, [2.5*inch, 3.5*inch])
         elements.append(client_table)
         elements.append(Spacer(1, 0.15*inch))
 
@@ -419,13 +541,7 @@ class ReportGenerator:
                     ["Statut", "✓ Validée" if acquisition.get("validated", False) else "✗ Non validée"]
                 ]
 
-                acq_table = Table(acq_data, colWidths=[2*inch, 4*inch])
-                acq_table.setStyle(TableStyle([
-                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                    ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-                    ('GRID', (0, 0), (-1, -1), 1, colors.lightgrey),
-                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ]))
+                acq_table = self._create_wrapped_table(acq_data, [2*inch, 4*inch], header_color=colors.white)
                 elements.append(acq_table)
 
                 # Statistiques de l'acquisition
@@ -437,13 +553,7 @@ class ReportGenerator:
                         ["R²", str(round(analysis.get("r2", 0), 4))]
                     ]
 
-                    stats_table = Table(stats_data, colWidths=[2*inch, 4*inch])
-                    stats_table.setStyle(TableStyle([
-                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-                        ('GRID', (0, 0), (-1, -1), 1, colors.lightgrey),
-                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ]))
+                    stats_table = self._create_wrapped_table(stats_data, [2*inch, 4*inch], header_color=colors.white)
                     elements.append(stats_table)
 
                 # Commentaires de l'acquisition

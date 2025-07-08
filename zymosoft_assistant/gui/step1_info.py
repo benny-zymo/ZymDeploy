@@ -8,8 +8,8 @@ Module de l'étape 1 de l'assistant d'installation ZymoSoft : Saisie des informa
 import os
 import logging
 import json
-from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout, 
-                            QPushButton, QFrame, QFileDialog, QMessageBox)
+from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
+                             QPushButton, QFrame, QFileDialog, QMessageBox, QGroupBox, QWidget)
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from zymosoft_assistant.utils.constants import COLOR_SCHEME
@@ -48,95 +48,157 @@ class Step1Info(StepFrame):
 
     def create_widgets(self):
         """
-        Crée les widgets de l'étape 1
+        Crée les widgets de l'étape 1 avec une hiérarchie claire et cohérente
         """
-        # Utilisation du layout vertical principal
-        main_layout = QVBoxLayout()
-        self.layout.addLayout(main_layout)
+        # === CONSTANTES DE DESIGN ===
+        SPACING_LARGE = 24
+        SPACING_MEDIUM = 16
+        SPACING_SMALL = 8
+        LABEL_WIDTH = 180
+        FIELD_WIDTH = 350
 
-        # Titre de l'étape
-        title_label = QLabel("Étape 1 : Saisie des informations client")
-        title_label.setStyleSheet(f"font-size: 18pt; font-weight: bold; color: {COLOR_SCHEME['primary']};")
-        main_layout.addWidget(title_label)
-        main_layout.addSpacing(20)
 
-        # Description
-        description_label = QLabel("Veuillez saisir les informations du client pour cette installation.")
-        description_label.setWordWrap(True)
-        description_label.setMinimumWidth(600)
-        main_layout.addWidget(description_label)
-        main_layout.addSpacing(20)
+        # === SECTION FORMULAIRE ===
+        form_group = QGroupBox("Informations client")
+        form_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 11pt;
+                color: #333333;
+                border: none;
+                margin-top: 12px;
+                padding-top: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 12px;
+                padding: 0 8px 0 8px;
+            }
+        """)
+        form_layout = QVBoxLayout(form_group)
+        form_layout.setSpacing(SPACING_MEDIUM)
+        form_layout.setContentsMargins(SPACING_LARGE, SPACING_LARGE, SPACING_LARGE, SPACING_MEDIUM)
 
-        # Formulaire
-        form_frame = QFrame()
-        form_layout = QVBoxLayout(form_frame)
-        main_layout.addWidget(form_frame)
+        # === CHAMPS DU FORMULAIRE ===
+        # Fonction helper pour créer un champ uniformément avec label au-dessus
+        def create_field(label_text, required=True):
+            container = QWidget()
+            layout = QVBoxLayout(container)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(SPACING_SMALL)
+
+            # Label
+            label = QLabel(label_text + (" *" if required else ""))
+            label.setStyleSheet("font-weight: normal; font-size: 11pt;")
+            layout.addWidget(label)
+
+            # Champ de saisie
+            field = QLineEdit()
+            field.setFixedWidth(FIELD_WIDTH)
+            field.setObjectName(label_text.lower().replace(" ", "_"))
+            field.setStyleSheet("""
+                QLineEdit {
+                    padding: 8px 12px;
+                    border: 2px solid #E0E0E0;
+                    border-radius: 4px;
+                    font-size: 11pt;
+                    background-color: white;
+                }
+                QLineEdit:focus {
+                    border-color: """ + COLOR_SCHEME['primary'] + """;
+                }
+                QLineEdit:hover {
+                    border-color: #C0C0C0;
+                }
+                QLineEdit[error=true] {
+                    border-color: """ + COLOR_SCHEME['error'] + """;
+                }
+            """)
+            layout.addWidget(field)
+
+            return container, field
 
         # Nom du client
-        client_name_layout = QHBoxLayout()
-        form_layout.addLayout(client_name_layout)
-
-        client_name_label = QLabel("Nom du client :")
-        client_name_label.setMinimumWidth(200)
-        client_name_layout.addWidget(client_name_label)
-
-        self.client_name_edit = QLineEdit()
-        self.client_name_edit.setMinimumWidth(300)
-        client_name_layout.addWidget(self.client_name_edit)
-        client_name_layout.addStretch(1)
-
-        form_layout.addSpacing(5)
+        client_container, self.client_name_edit = create_field("Nom du client")
+        form_layout.addWidget(client_container)
 
         # Responsable CS
-        cs_responsible_layout = QHBoxLayout()
-        form_layout.addLayout(cs_responsible_layout)
-
-        cs_responsible_label = QLabel("Responsable CS :")
-        cs_responsible_label.setMinimumWidth(200)
-        cs_responsible_layout.addWidget(cs_responsible_label)
-
-        self.cs_responsible_edit = QLineEdit()
-        self.cs_responsible_edit.setMinimumWidth(300)
-        cs_responsible_layout.addWidget(self.cs_responsible_edit)
-        cs_responsible_layout.addStretch(1)
-
-        form_layout.addSpacing(5)
+        cs_container, self.cs_responsible_edit = create_field("Responsable CS")
+        form_layout.addWidget(cs_container)
 
         # Responsable instrumentation
-        instrumentation_layout = QHBoxLayout()
-        form_layout.addLayout(instrumentation_layout)
+        instr_container, self.instrumentation_responsible_edit = create_field("Responsable instrumentation")
+        form_layout.addWidget(instr_container)
 
-        instrumentation_label = QLabel("Responsable instrumentation :")
-        instrumentation_label.setMinimumWidth(200)
-        instrumentation_layout.addWidget(instrumentation_label)
+        self.layout.addWidget(form_group)
 
-        self.instrumentation_responsible_edit = QLineEdit()
-        self.instrumentation_responsible_edit.setMinimumWidth(300)
-        instrumentation_layout.addWidget(self.instrumentation_responsible_edit)
-        instrumentation_layout.addStretch(1)
+        # === SECTION ACTIONS ===
+        actions_layout = QHBoxLayout()
+        actions_layout.setSpacing(SPACING_MEDIUM)
+        actions_layout.setContentsMargins(0, SPACING_LARGE, 0, 0)
 
-        # Zone d'information
-        main_layout.addSpacing(20)
-        info_label = QLabel("Tous les champs sont obligatoires.")
-        info_label.setStyleSheet(f"color: {COLOR_SCHEME['text_secondary']};")
-        info_label.setWordWrap(True)
-        main_layout.addWidget(info_label)
-
-        # Bouton de chargement des informations précédentes
-        main_layout.addSpacing(10)
-        load_button = QPushButton("Charger informations précédentes")
+        # Bouton charger informations précédentes
+        load_button = QPushButton("📁 Charger informations précédentes")
+        load_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #F8F9FA;
+                color: {COLOR_SCHEME['primary']};
+                border: 2px solid {COLOR_SCHEME['primary']};
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-size: 11pt;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: {COLOR_SCHEME['primary']};
+                color: white;
+            }}
+            QPushButton:pressed {{
+                background-color: {COLOR_SCHEME['primary_pressed']};
+            }}
+        """)
         load_button.clicked.connect(self.load_previous_info)
-        main_layout.addWidget(load_button, 0, Qt.AlignCenter)
+        actions_layout.addWidget(load_button)
 
-        # Message d'erreur
-        main_layout.addSpacing(10)
+        actions_layout.addStretch(1)
+        self.layout.addLayout(actions_layout)
+
+        # === ZONE D'INFORMATION ET ERREURS ===
+        info_section = QVBoxLayout()
+        info_section.setSpacing(SPACING_SMALL)
+        info_section.setContentsMargins(0, SPACING_LARGE, 0, 0)
+
+        # Information obligatoire
+        info_label = QLabel("* Tous les champs sont obligatoires")
+        info_label.setStyleSheet("font-size: 10pt; color: #888888; font-style: italic;")
+        info_section.addWidget(info_label)
+
+        # Message d'erreur (initialement caché)
         self.error_label = QLabel("")
-        self.error_label.setStyleSheet(f"color: {COLOR_SCHEME['error']};")
+        self.error_label.setStyleSheet(f"""
+            color: {COLOR_SCHEME['error']};
+            background-color: #FFF5F5;
+            border: 1px solid {COLOR_SCHEME['error']};
+            border-radius: 4px;
+            padding: 12px 16px;
+            font-size: 11pt;
+            font-weight: 500;
+            margin-top: 8px;
+        """)
         self.error_label.setWordWrap(True)
-        main_layout.addWidget(self.error_label)
+        self.error_label.hide()  # Caché par défaut
+        info_section.addWidget(self.error_label)
 
-        # Ajouter un espace extensible à la fin
-        main_layout.addStretch(1)
+        self.layout.addLayout(info_section)
+
+        # === ESPACE FLEXIBLE ===
+        self.layout.addStretch(1)
+
+        # === CONNEXIONS DES SIGNAUX ===
+        # Validation en temps réel
+        self.client_name_edit.textChanged.connect(self.validate)
+        self.cs_responsible_edit.textChanged.connect(self.validate)
+        self.instrumentation_responsible_edit.textChanged.connect(self.validate)
 
     def validate(self):
         """
@@ -153,13 +215,43 @@ class Step1Info(StepFrame):
 
         valid, errors = validate_client_info(client_info)
 
+        # Réinitialiser les états d'erreur des champs
+        self.client_name_edit.setProperty("error", False)
+        self.cs_responsible_edit.setProperty("error", False)
+        self.instrumentation_responsible_edit.setProperty("error", False)
+
+        # Appliquer les styles pour refléter les changements
+        self.client_name_edit.style().unpolish(self.client_name_edit)
+        self.client_name_edit.style().polish(self.client_name_edit)
+        self.cs_responsible_edit.style().unpolish(self.cs_responsible_edit)
+        self.cs_responsible_edit.style().polish(self.cs_responsible_edit)
+        self.instrumentation_responsible_edit.style().unpolish(self.instrumentation_responsible_edit)
+        self.instrumentation_responsible_edit.style().polish(self.instrumentation_responsible_edit)
+
         if not valid:
-            self.error_label.setText("\n".join(errors))
+            # Marquer les champs spécifiques en erreur
+            for error in errors:
+                if "Nom du client" in error:
+                    self.client_name_edit.setProperty("error", True)
+                    self.client_name_edit.style().unpolish(self.client_name_edit)
+                    self.client_name_edit.style().polish(self.client_name_edit)
+                if "Responsable CS" in error:
+                    self.cs_responsible_edit.setProperty("error", True)
+                    self.cs_responsible_edit.style().unpolish(self.cs_responsible_edit)
+                    self.cs_responsible_edit.style().polish(self.cs_responsible_edit)
+                if "Responsable instrumentation" in error:
+                    self.instrumentation_responsible_edit.setProperty("error", True)
+                    self.instrumentation_responsible_edit.style().unpolish(self.instrumentation_responsible_edit)
+                    self.instrumentation_responsible_edit.style().polish(self.instrumentation_responsible_edit)
+
+            # Afficher le message d'erreur de manière plus lisible
+            self.error_label.setText("Veuillez remplir tous les champs obligatoires marqués en rouge.")
+            self.error_label.show()
             logger.warning(f"Validation de l'étape 1 échouée: {errors}")
             return False
 
         # Effacer le message d'erreur
-        self.error_label.setText("")
+        self.error_label.hide()
         logger.info("Validation de l'étape 1 réussie")
         return True
 
@@ -194,7 +286,22 @@ class Step1Info(StepFrame):
         self.client_name_edit.setText("")
         self.cs_responsible_edit.setText("")
         self.instrumentation_responsible_edit.setText("")
-        self.error_label.setText("")
+
+        # Réinitialiser les états d'erreur
+        self.client_name_edit.setProperty("error", False)
+        self.cs_responsible_edit.setProperty("error", False)
+        self.instrumentation_responsible_edit.setProperty("error", False)
+
+        # Appliquer les styles
+        self.client_name_edit.style().unpolish(self.client_name_edit)
+        self.client_name_edit.style().polish(self.client_name_edit)
+        self.cs_responsible_edit.style().unpolish(self.cs_responsible_edit)
+        self.cs_responsible_edit.style().polish(self.cs_responsible_edit)
+        self.instrumentation_responsible_edit.style().unpolish(self.instrumentation_responsible_edit)
+        self.instrumentation_responsible_edit.style().polish(self.instrumentation_responsible_edit)
+
+        # Masquer le message d'erreur
+        self.error_label.hide()
 
         logger.info("Étape 1 réinitialisée")
 

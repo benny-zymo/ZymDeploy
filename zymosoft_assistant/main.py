@@ -9,11 +9,9 @@ Point d'entrée de l'application
 import sys
 import os
 import logging
-from PyQt5.QtWidgets import QApplication
-
-# Ajouter le répertoire parent au path pour permettre les imports absolus
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from zymosoft_assistant.gui.main_window import MainWindow
+import subprocess
+import pkg_resources
+from PyQt5.QtWidgets import QApplication, QMessageBox
 
 # Configuration du logging
 logging.basicConfig(
@@ -27,6 +25,66 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Ajouter le répertoire parent au path pour permettre les imports absolus
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Vérifier la version de NumPy avant de continuer
+def check_numpy_version():
+    """
+    Vérifie la version de NumPy et la rétrograde si nécessaire
+    """
+    try:
+        numpy_version = pkg_resources.get_distribution("numpy").version
+        logger.info(f"Version actuelle de NumPy: {numpy_version}")
+
+        if numpy_version.startswith("2."):
+            logger.warning("NumPy version 2.x détectée. Cela peut causer des problèmes de compatibilité.")
+
+            # Utiliser un QMessageBox pour informer l'utilisateur
+            app = QApplication(sys.argv)  # Créer une application temporaire pour afficher le message
+            result = QMessageBox.question(
+                None, 
+                "Incompatibilité de version NumPy", 
+                f"La version actuelle de NumPy ({numpy_version}) peut causer des problèmes de compatibilité.\n\n"
+                "Voulez-vous rétrograder NumPy à une version compatible (< 2.0.0) ?\n\n"
+                "Note: Cette opération peut prendre quelques instants.",
+                QMessageBox.Yes | QMessageBox.No
+            )
+
+            if result == QMessageBox.Yes:
+                logger.info("Rétrogradation de NumPy à une version < 2.0.0...")
+                try:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy<2.0.0", "--force-reinstall"])
+
+                    QMessageBox.information(
+                        None,
+                        "Rétrogradation terminée",
+                        "NumPy a été rétrogradé avec succès. L'application va maintenant se fermer.\n\n"
+                        "Veuillez la redémarrer pour appliquer les changements."
+                    )
+                    sys.exit(0)
+                except Exception as e:
+                    logger.error(f"Erreur lors de la rétrogradation de NumPy: {str(e)}", exc_info=True)
+                    QMessageBox.critical(
+                        None,
+                        "Erreur",
+                        f"Une erreur est survenue lors de la rétrogradation de NumPy:\n{str(e)}\n\n"
+                        "L'application peut ne pas fonctionner correctement."
+                    )
+            else:
+                logger.info("L'utilisateur a choisi de ne pas rétrograder NumPy.")
+                QMessageBox.warning(
+                    None,
+                    "Avertissement",
+                    "L'application peut ne pas fonctionner correctement avec NumPy 2.x."
+                )
+    except Exception as e:
+        logger.error(f"Erreur lors de la vérification de la version de NumPy: {str(e)}", exc_info=True)
+
+# Vérifier la version de NumPy avant d'importer les modules qui en dépendent
+check_numpy_version()
+
+from zymosoft_assistant.gui.main_window import MainWindow
 def main():
     """Point d'entrée principal de l'application"""
     try:
@@ -55,3 +113,11 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+'''
+TODO : 
+
+check step 3 analyser les resutlats problème 
+
+'''

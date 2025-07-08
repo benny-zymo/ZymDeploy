@@ -10,6 +10,7 @@ import logging
 import configparser
 from typing import Dict, Any, List, Tuple
 from pathlib import Path
+from zymosoft_assistant.utils.helpers import  get_exe_version
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,17 @@ class ConfigChecker:
         results["etc_exists"] = os.path.exists(etc_path)
         results["resultats_exists"] = os.path.exists(resultats_path)
 
+        # si resultat n'existe pas, on le crée
+        if not results["resultats_exists"]:
+            try:
+                os.makedirs(resultats_path)
+                logger.info(f"Dossier Resultats créé: {resultats_path}")
+                results["resultats_exists"] = True
+            except Exception as e:
+                logger.error(f"Erreur lors de la création du dossier Resultats: {e}")
+                results["installation_valid"] = False
+                return results
+
         # Vérification des fichiers dans bin/
         if results["bin_exists"]:
             zymocubectrl_path = os.path.join(bin_path, "ZymoCubeCtrl.exe")
@@ -107,13 +119,23 @@ class ConfigChecker:
 
             # Vérification de la version de ZymoSoft.exe
             if results["zymosoft_exists"]:
-                # TODO: Implémenter la vérification de version du fichier exe
-                results["version_match"] = True
+                exe_version = get_exe_version(zymosoft_path)
+
+                if exe_version and exe_version.startswith(self.version):
+                    # afficher les deux versions
+                    logger.info(f"Version de ZymoSoft.exe trouvée: {exe_version}")
+                    logger.info(f"Version de ZymoSoft.exe correspondante: {self.version}")
+                    results["version_match"] = True
+                else:
+                    logger.warning(f"Version de ZymoSoft.exe non correspondante: {exe_version} (attendu: {self.version})")
+                    results["version_match"] = False
+
 
         # Mise à jour du statut global
         results["installation_valid"] = (
             results["bin_exists"] and
             results["etc_exists"] and
+            results["resultats_exists"] and
             results["zymocubectrl_exists"] and
             results["zymosoft_exists"] and
             results["workers_exists"] and

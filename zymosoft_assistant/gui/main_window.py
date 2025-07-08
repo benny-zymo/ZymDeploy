@@ -11,13 +11,13 @@ import logging
 import uuid
 import datetime
 import json
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                            QLabel, QPushButton, QProgressBar, QMessageBox,
-                            QFileDialog, QStackedWidget, QAction, QMenu, QMenuBar)
+from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                             QLabel, QPushButton, QProgressBar, QMessageBox,
+                             QFileDialog, QStackedWidget, QAction, QMenu, QMenuBar)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
-from zymosoft_assistant.utils.constants import COLOR_SCHEME, APP_CONFIG, STEPS
+from zymosoft_assistant.utils.constants import COLOR_SCHEME, APP_CONFIG, STEPS, PLATE_TYPES, ACQUISITION_MODES
 from zymosoft_assistant.utils.helpers import create_empty_session, save_session_data, load_session_data
 from .step1_info import Step1Info
 from .step2_checks import Step2Checks
@@ -25,6 +25,7 @@ from .step3_acquisition import Step3Acquisition
 from .step4_closure import Step4Closure
 
 logger = logging.getLogger(__name__)
+
 
 class MainWindow(QMainWindow):
     """
@@ -40,6 +41,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(APP_CONFIG['title'])
         self.resize(APP_CONFIG['window_width'], APP_CONFIG['window_height'])
         self.setMinimumSize(APP_CONFIG['min_width'], APP_CONFIG['min_height'])
+        self.initial_load = True
 
         # Icône de l'application (si disponible)
         if APP_CONFIG['icon_path'] and os.path.exists(APP_CONFIG['icon_path']):
@@ -52,6 +54,9 @@ class MainWindow(QMainWindow):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
+        # Supprimer toutes les marges du layout principal
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
 
         # Création de l'interface
         self.create_widgets()
@@ -72,9 +77,14 @@ class MainWindow(QMainWindow):
         Retourne la feuille de style CSS pour l'application
         """
         return f"""
-            QWidget {{
+            /* Style global - fond blanc uniforme */
+            QMainWindow {{
                 background-color: {COLOR_SCHEME['background']};
+            }}
+
+            QWidget {{
                 color: {COLOR_SCHEME['text']};
+                background-color: {COLOR_SCHEME['background']};
             }}
 
             QLabel {{
@@ -88,7 +98,7 @@ class MainWindow(QMainWindow):
             }}
 
             QLabel[subheader="true"] {{
-                font-size: 14pt;
+                font-size: 12pt;
                 font-weight: bold;
             }}
 
@@ -124,14 +134,168 @@ class MainWindow(QMainWindow):
                 background-color: {COLOR_SCHEME['disabled']};
             }}
 
+            /* Menu bar - bordure bas et fond uniforme */
+            QMenuBar {{
+background-color: #f5f6fa;                
+border: none;
+                color: {COLOR_SCHEME['text']};
+                padding: 0px;
+                margin: 0px;
+                border-top: 1px solid {COLOR_SCHEME['border']};
+                border-bottom: 1px solid {COLOR_SCHEME['border']};
+            }}
+
+            QMenuBar::item {{
+                background-color: transparent;
+                padding: 5px 10px;
+            }}
+
+            QMenuBar::item:selected {{
+                background-color: {COLOR_SCHEME['primary']};
+                color: white;
+            }}
+
+            /* Sidebar (colonne de gauche) */
+            #leftColumn {{
+                background-color: {COLOR_SCHEME['background']};
+                border-right: 1px solid {COLOR_SCHEME['border']};
+                margin: 0px;
+                padding: 0px;
+            }}
+
+            /* Barre de progression */
             QProgressBar {{
                 border: none;
-                background-color: {COLOR_SCHEME['background']};
+                background-color: {COLOR_SCHEME['surface']};
                 text-align: center;
+                height: 20px;
+                margin: 10px;
             }}
 
             QProgressBar::chunk {{
                 background-color: {COLOR_SCHEME['primary']};
+            }}
+
+            /* Indicateurs d'étapes - prennent toute la largeur */
+            #stepIndicatorContainer {{
+                background-color: {COLOR_SCHEME['background']};
+                border: none;
+                border_bottom: 1px solid {COLOR_SCHEME['border']};
+                border-right: 3px solid transparent;
+                margin: 0px;
+                padding: 0px;
+            }}
+
+            #stepIndicatorContainer[status="completed"] {{
+                background-color: {COLOR_SCHEME['background']};
+                border-right: 3px solid {COLOR_SCHEME['success']};
+            }}
+
+            #stepIndicatorContainer[status="current"] {{
+                background-color: {COLOR_SCHEME['background']};
+                border-right: 3px solid orange;
+            }}
+
+            #stepIndicatorContainer[status="invalid"] {{
+                background-color: {COLOR_SCHEME['background']};
+                border-right: 3px solid {COLOR_SCHEME['error']};
+            }}
+
+            #stepIndicatorContainer[status="pending"] {{
+                background-color: {COLOR_SCHEME['background']};
+                border-right: 3px solid gray;
+            }}
+
+            #stepIndicator {{
+                font-size: 14pt;
+                font-weight: bold;
+                color: {COLOR_SCHEME['text']};
+                background-color: transparent;
+            }}
+
+            #stepIndicator[status="completed"] {{
+                color: {COLOR_SCHEME['success']};
+            }}
+
+            #stepIndicator[status="current"] {{
+                color: {COLOR_SCHEME['primary']};
+            }}
+
+            #stepIndicator[status="invalid"] {{
+                color: {COLOR_SCHEME['error']};
+            }}
+
+            #stepIndicator[status="pending"] {{
+                color: {COLOR_SCHEME['text_secondary']};
+            }}
+
+            /* Colonne de droite - sans padding */
+            #rightColumn {{
+                background-color: {COLOR_SCHEME['background']};
+                margin: 0px;
+                padding: 0px;
+            }}
+
+            /* En-tête de l'étape */
+            #topRow {{
+                background-color: {COLOR_SCHEME['background']};
+                border-bottom: 1px solid {COLOR_SCHEME['border']};
+                padding: 15px;
+                margin: 0px;
+            }}
+
+            #stepTitle {{
+                font-size: 14pt;
+                font-weight: bold;
+                color: {COLOR_SCHEME['primary']};
+                margin: 0px;
+                padding-top: 15px;
+                padding-left: 15px;
+            }}
+
+            #stepDescription {{
+                font-size: 10pt;
+                color: {COLOR_SCHEME['text_secondary']};
+                margin-top: 1px;
+
+                padding: 15px;
+                padding-top: 0px;
+            }}
+
+            /* Conteneur des étapes */
+            #stepContainer {{
+                background-color: {COLOR_SCHEME['background']};
+                margin: 0px;
+                padding: 0px;
+            }}
+
+            /* Barre de navigation */
+            #navigationBar {{
+                background-color: {COLOR_SCHEME['background']};
+                border-top: 1px solid {COLOR_SCHEME['border']};
+                padding: 15px;
+                margin: 0px;
+            }}
+
+            /* Barre de statut */
+            #statusBar {{
+                background-color: {COLOR_SCHEME['background']};
+                border-top: 1px solid {COLOR_SCHEME['border']};
+                padding: 5px 15px;
+                margin: 0px;
+            }}
+
+            /* Barre de progression standard */
+            QProgressBar {{
+                border: none;
+                background-color: {COLOR_SCHEME['surface']};
+                text-align: center;
+                border-radius: 25px;
+            }}
+
+            QProgressBar::chunk {{
+                background-color: {COLOR_SCHEME['primary']};
+                border-radius: 25px;
             }}
         """
 
@@ -142,29 +306,81 @@ class MainWindow(QMainWindow):
         # Appliquer la feuille de style
         self.setStyleSheet(self.get_style_sheet())
 
+        # Layout principal horizontal (colonnes) - sans espacement
+        main_horizontal_layout = QHBoxLayout()
+        main_horizontal_layout.setContentsMargins(0, 0, 0, 0)
+        main_horizontal_layout.setSpacing(0)
+        self.main_layout.addLayout(main_horizontal_layout)
+
+        # Sidebar (colonne de gauche)
+        left_column = QWidget()
+        left_column_layout = QVBoxLayout(left_column)
+        left_column_layout.setContentsMargins(0, 0, 0, 0)
+        left_column_layout.setSpacing(0)
+        left_column.setFixedWidth(80)  # Largeur un peu plus large pour une vraie sidebar
+        left_column.setObjectName("leftColumn")
+        main_horizontal_layout.addWidget(left_column)
 
         # Barre de progression
         self.progress_bar = QProgressBar()
         self.progress_bar.setTextVisible(True)
-        self.main_layout.addWidget(self.progress_bar)
+        self.progress_bar.setMinimumWidth(60)
+        left_column_layout.addWidget(self.progress_bar)
+        left_column_layout.addSpacing(10)
 
-        # Indicateurs d'étapes
-        steps_layout = QHBoxLayout()
-        self.main_layout.addLayout(steps_layout)
-
+        # Indicateurs d'étapes - prennent toute la largeur disponible
         self.step_indicators = []
         for i, step in enumerate(STEPS):
-            indicator = QLabel(f"{i+1}. {step['title']}")
-            steps_layout.addWidget(indicator, 1)
+            indicator_container = QWidget()
+            indicator_container.setObjectName("stepIndicatorContainer")
+            indicator_container.setFixedHeight(60)
+            indicator_layout = QVBoxLayout(indicator_container)
+            indicator_layout.setContentsMargins(0, 0, 0, 0)
+            indicator_layout.setAlignment(Qt.AlignCenter)
+
+            indicator = QLabel(f"{i + 1}")
+            indicator.setAlignment(Qt.AlignCenter)
+            indicator.setObjectName("stepIndicator")
+            indicator_layout.addWidget(indicator)
+
+            left_column_layout.addWidget(indicator_container)
             self.step_indicators.append(indicator)
 
-        # Conteneur pour les étapes
-        self.step_container = QStackedWidget()
-        self.main_layout.addWidget(self.step_container, 1)
+        left_column_layout.addStretch(1)
 
-        # Barre de navigation
-        nav_layout = QHBoxLayout()
-        self.main_layout.addLayout(nav_layout)
+        # Colonne de droite (principale) - sans espacement
+        right_column = QWidget()
+        right_column_layout = QVBoxLayout(right_column)
+        right_column_layout.setContentsMargins(0, 0, 0, 0)
+        right_column_layout.setSpacing(0)
+        right_column.setObjectName("rightColumn")
+        main_horizontal_layout.addWidget(right_column, 1)  # Prend tout l'espace restant
+
+        # En-tête avec le nom de l'étape et sa description
+        top_row = QWidget()
+        top_row_layout = QVBoxLayout(top_row)
+        top_row_layout.setContentsMargins(0, 0, 0, 0)
+        top_row.setObjectName("topRow")
+        right_column_layout.addWidget(top_row)
+
+        self.step_title_label = QLabel()
+        self.step_title_label.setObjectName("stepTitle")
+        top_row_layout.addWidget(self.step_title_label)
+
+        self.step_description_label = QLabel()
+        self.step_description_label.setObjectName("stepDescription")
+        top_row_layout.addWidget(self.step_description_label)
+
+        # Conteneur principal pour les étapes - sans espacement
+        self.step_container = QStackedWidget()
+        self.step_container.setObjectName("stepContainer")
+        right_column_layout.addWidget(self.step_container, 1)
+
+        # Barre de navigation en bas
+        nav_widget = QWidget()
+        nav_layout = QHBoxLayout(nav_widget)
+        nav_widget.setObjectName("navigationBar")
+        right_column_layout.addWidget(nav_widget)
 
         self.prev_button = QPushButton("Précédent")
         self.prev_button.clicked.connect(self.previous_step)
@@ -176,9 +392,12 @@ class MainWindow(QMainWindow):
         self.next_button.clicked.connect(self.next_step)
         nav_layout.addWidget(self.next_button)
 
-        # Barre de statut
-        status_layout = QHBoxLayout()
-        self.main_layout.addLayout(status_layout)
+        # Barre de statut (footer) - sans espacement
+        status_widget = QWidget()
+        status_layout = QHBoxLayout(status_widget)
+        status_layout.setContentsMargins(0, 0, 0, 0)
+        status_widget.setObjectName("statusBar")
+        self.main_layout.addWidget(status_widget)
 
         self.status_label = QLabel("Prêt")
         status_layout.addWidget(self.status_label)
@@ -259,9 +478,9 @@ class MainWindow(QMainWindow):
             logger.info("Toutes les étapes ont été initialisées avec succès")
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation des étapes: {str(e)}", exc_info=True)
-            QMessageBox.critical(self, "Erreur d'initialisation", 
-                               f"Une erreur est survenue lors de l'initialisation des étapes:\n{str(e)}\n\n"
-                               f"L'application risque de ne pas fonctionner correctement.")
+            QMessageBox.critical(self, "Erreur d'initialisation",
+                                 f"Une erreur est survenue lors de l'initialisation des étapes:\n{str(e)}\n\n"
+                                 f"L'application risque de ne pas fonctionner correctement.")
 
     def show_step(self, index):
         """
@@ -283,15 +502,39 @@ class MainWindow(QMainWindow):
             self.step_container.setCurrentIndex(index)
             self.current_step_index = index
 
-            # Mise à jour des indicateurs d'étapes
+            # Mise à jour du titre et de la description de l'étape
+            self.step_title_label.setText(STEPS[index]['title'])
+            self.step_description_label.setText(STEPS[index]['description'])
+
+            # Mise à jour des indicateurs d'étapes avec les statuts
             logger.debug("Mise à jour des indicateurs d'étapes")
             for i, indicator in enumerate(self.step_indicators):
+                indicator_container = indicator.parentWidget()
                 if i < index:
-                    indicator.setStyleSheet(f"color: {COLOR_SCHEME['success']}")
+                    # Étape validée (vert)
+                    indicator_container.setProperty("status", "completed")
+                    indicator.setProperty("status", "completed")
                 elif i == index:
-                    indicator.setStyleSheet(f"color: {COLOR_SCHEME['primary']}")
+                    # Étape actuelle (primary)
+                    indicator_container.setProperty("status", "current")
+                    indicator.setProperty("status", "current")
+                elif not self.initial_load and not self.steps[i].validate():
+                    # Étape non valide (rouge)
+                    indicator_container.setProperty("status", "invalid")
+                    indicator.setProperty("status", "invalid")
                 else:
-                    indicator.setStyleSheet(f"color: {COLOR_SCHEME['text_secondary']}")
+                    # Étape non encore validée (gris)
+                    indicator_container.setProperty("status", "pending")
+                    indicator.setProperty("status", "pending")
+
+            if self.initial_load and index == 0:
+                self.initial_load = False
+
+                # Force le rafraîchissement du style
+                indicator_container.style().unpolish(indicator_container)
+                indicator_container.style().polish(indicator_container)
+                indicator.style().unpolish(indicator)
+                indicator.style().polish(indicator)
 
             # Mise à jour de la barre de progression
             progress_value = int((index / (len(self.steps) - 1)) * 100)
@@ -322,7 +565,8 @@ class MainWindow(QMainWindow):
             logger.info(f"Affichage de l'étape {index + 1}: {STEPS[index]['title']} réussi")
         except Exception as e:
             logger.error(f"Erreur lors de l'affichage de l'étape {index + 1}: {str(e)}", exc_info=True)
-            QMessageBox.critical(self, "Erreur", f"Une erreur est survenue lors de l'affichage de l'étape {index + 1}:\n{str(e)}")
+            QMessageBox.critical(self, "Erreur",
+                                 f"Une erreur est survenue lors de l'affichage de l'étape {index + 1}:\n{str(e)}")
 
     def next_step(self):
         """
@@ -355,7 +599,8 @@ class MainWindow(QMainWindow):
                 self.finalize()
         except Exception as e:
             logger.error(f"Erreur lors du passage à l'étape suivante: {str(e)}", exc_info=True)
-            QMessageBox.critical(self, "Erreur", f"Une erreur est survenue lors du passage à l'étape suivante:\n{str(e)}")
+            QMessageBox.critical(self, "Erreur",
+                                 f"Une erreur est survenue lors du passage à l'étape suivante:\n{str(e)}")
 
     def previous_step(self):
         """
@@ -377,16 +622,17 @@ class MainWindow(QMainWindow):
                 logger.info("Déjà à la première étape, impossible de revenir en arrière")
         except Exception as e:
             logger.error(f"Erreur lors du retour à l'étape précédente: {str(e)}", exc_info=True)
-            QMessageBox.critical(self, "Erreur", f"Une erreur est survenue lors du retour à l'étape précédente:\n{str(e)}")
+            QMessageBox.critical(self, "Erreur",
+                                 f"Une erreur est survenue lors du retour à l'étape précédente:\n{str(e)}")
 
     def finalize(self):
         """
         Finalise l'assistant et génère le rapport final
         """
         # Confirmation
-        reply = QMessageBox.question(self, "Finalisation", 
-                                    "Êtes-vous sûr de vouloir finaliser l'installation ?",
-                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(self, "Finalisation",
+                                     "Êtes-vous sûr de vouloir finaliser l'installation ?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
 
@@ -398,9 +644,9 @@ class MainWindow(QMainWindow):
             report_path = self.steps[3].generate_final_report()
 
             # Affichage du message de succès
-            QMessageBox.information(self, "Finalisation", 
-                                   f"Installation finalisée avec succès !\n\n"
-                                   f"Le rapport final a été généré :\n{report_path}")
+            QMessageBox.information(self, "Finalisation",
+                                    f"Installation finalisée avec succès !\n\n"
+                                    f"Le rapport final a été généré :\n{report_path}")
 
             # Sauvegarde de la session
             self.save_session()
@@ -415,10 +661,10 @@ class MainWindow(QMainWindow):
         """
         Crée une nouvelle session
         """
-        reply = QMessageBox.question(self, "Nouvelle session", 
-                                    "Êtes-vous sûr de vouloir créer une nouvelle session ? "
-                                    "Toutes les données non sauvegardées seront perdues.",
-                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(self, "Nouvelle session",
+                                     "Êtes-vous sûr de vouloir créer une nouvelle session ? "
+                                     "Toutes les données non sauvegardées seront perdues.",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.session_data = create_empty_session()
             self.show_step(0)
@@ -492,28 +738,46 @@ class MainWindow(QMainWindow):
         """
         Affiche la documentation
         """
-        QMessageBox.information(self, "Documentation", 
-                               "La documentation de l'Assistant d'installation ZymoSoft "
-                               "est disponible dans le dossier 'docs' de l'application.")
+        QMessageBox.information(self, "Documentation",
+                                "La documentation de l'Assistant d'installation ZymoSoft "
+                                "est disponible dans le dossier 'docs' de l'application.")
 
     def show_about(self):
         """
         Affiche les informations sur l'application
         """
-        QMessageBox.information(self, "À propos", 
-                               f"Assistant d'installation ZymoSoft\n"
-                               f"Version {APP_CONFIG['version']}\n\n"
-                               f"© 2025 Zymoptiq")
+        QMessageBox.information(self, "À propos",
+                                f"Assistant d'installation ZymoSoft\n"
+                                f"Version {APP_CONFIG['version']}\n\n"
+                                f"© 2025 Zymoptiq")
 
     def quit_app(self):
         """
         Quitte l'application
         """
-        reply = QMessageBox.question(self, "Quitter", 
-                                    "Êtes-vous sûr de vouloir quitter ? "
-                                    "Toutes les données non sauvegardées seront perdues.",
-                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(self, "Quitter",
+                                     "Êtes-vous sûr de vouloir quitter ? "
+                                     "Toutes les données non sauvegardées seront perdues.",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.close()
 
     # La méthode run() n'est plus nécessaire car la boucle principale est gérée par QApplication.exec_() dans main.py
+
+    def get_plate_types(self):
+        """
+        Retourne les types de plaques définis dans les constantes
+
+        Returns:
+            list: Liste des types de plaques
+        """
+        return PLATE_TYPES
+
+    def get_acquisition_modes(self):
+        """
+        Retourne les modes d'acquisition définis dans les constantes
+
+        Returns:
+            list: Liste des modes d'acquisition
+        """
+        return ACQUISITION_MODES

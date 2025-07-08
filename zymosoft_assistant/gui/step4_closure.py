@@ -61,11 +61,7 @@ class Step4Closure(StepFrame):
         main_layout = QVBoxLayout()
         self.layout.addLayout(main_layout)
 
-        # Titre de l'étape
-        title_label = QLabel("Étape 4 : Clôture de l'installation")
-        title_label.setStyleSheet(f"font-size: 18pt; font-weight: bold; color: {COLOR_SCHEME['primary']};")
-        main_layout.addWidget(title_label)
-        main_layout.addSpacing(20)
+
 
         # Conteneur principal
         main_container = QWidget()
@@ -190,75 +186,97 @@ class Step4Closure(StepFrame):
         """
         Met à jour le résumé de l'installation
         """
-        # Récupérer les informations client
-        client_info = self.main_window.session_data.get("client_info", {})
-        client_name = client_info.get("name", "Non spécifié")
-        cs_responsible = client_info.get("cs_responsible", "Non spécifié")
-        instrumentation_responsible = client_info.get("instrumentation_responsible", "Non spécifié")
+        try:
+            # Vérifier si summary_text existe
+            if self.summary_text is None:
+                logger.error("Erreur dans _update_summary: self.summary_text est None")
+                return
 
-        # Récupérer les informations sur les vérifications
-        checks = self.main_window.session_data.get("step2_checks", {})
-        checks_status = "✓ Réussies" if checks.get("all_passed", False) else "✗ Échouées"
+            # Récupérer les informations client
+            client_info = self.main_window.session_data.get("client_info", {})
+            client_name = client_info.get("name", "Non spécifié")
+            cs_responsible = client_info.get("cs_responsible", "Non spécifié")
+            instrumentation_responsible = client_info.get("instrumentation_responsible", "Non spécifié")
 
-        # Récupérer les informations sur les acquisitions
-        acquisitions = self.main_window.session_data.get("acquisitions", [])
-        valid_acquisitions = [acq for acq in acquisitions if acq.get("validated", False)]
+            # Récupérer les informations sur les vérifications
+            checks = self.main_window.session_data.get("step2_checks", {})
+            checks_status = "✓ Réussies" if checks.get("all_passed", False) else "✗ Échouées"
 
-        # Construire le résumé
-        summary = (
-            f"Client: {client_name}\n"
-            f"Responsable CS: {cs_responsible}\n"
-            f"Responsable instrumentation: {instrumentation_responsible}\n\n"
-            f"Vérifications: {checks_status}\n"
-            f"Acquisitions validées: {len(valid_acquisitions)}/{len(acquisitions)}\n\n"
-            f"Actions à effectuer:\n"
-            f"- {'✓' if self.client_mode_var else '✗'} Passer en mode client\n"
-            f"- {'✓' if self.clean_pc_var else '✗'} Nettoyer le PC\n"
-        )
+            # Récupérer les informations sur les acquisitions
+            acquisitions = self.main_window.session_data.get("acquisitions", [])
+            valid_acquisitions = [acq for acq in acquisitions if acq.get("validated", False)]
 
-        # Mettre à jour le texte
-        self.summary_text.setPlainText(summary)
+            # Construire le résumé
+            summary = (
+                f"Client: {client_name}\n"
+                f"Responsable CS: {cs_responsible}\n"
+                f"Responsable instrumentation: {instrumentation_responsible}\n\n"
+                f"Vérifications: {checks_status}\n"
+                f"Acquisitions validées: {len(valid_acquisitions)}/{len(acquisitions)}\n\n"
+                f"Actions à effectuer:\n"
+                f"- {'✓' if self.client_mode_var else '✗'} Passer en mode client\n"
+                f"- {'✓' if self.clean_pc_var else '✗'} Nettoyer le PC\n"
+            )
+
+            # Mettre à jour le texte
+            self.summary_text.setPlainText(summary)
+        except Exception as e:
+            logger.error(f"Erreur dans _update_summary: {str(e)}", exc_info=True)
 
     def _update_history(self):
         """
         Met à jour l'historique des acquisitions
         """
-        # Effacer l'historique précédent
-        self.history_tree.clear()
+        try:
+            # Effacer l'historique précédent
+            if self.history_tree is None:
+                logger.error("Erreur dans _update_history: self.history_tree est None")
+                return
 
-        # Récupérer les acquisitions
-        acquisitions = self.main_window.session_data.get("acquisitions", [])
+            self.history_tree.clear()
 
-        if not acquisitions:
-            return
+            # Récupérer les acquisitions
+            acquisitions = self.main_window.session_data.get("acquisitions", [])
 
-        # Récupérer les constantes
-        plate_types = self.main_window.get_plate_types()
-        acquisition_modes = self.main_window.get_acquisition_modes()
+            if not acquisitions:
+                return
 
-        # Ajouter les acquisitions à l'historique
-        for acquisition in acquisitions:
-            # Récupérer les noms lisibles
-            plate_type_id = acquisition.get('plate_type', '')
-            mode_id = acquisition.get('mode', '')
+            # Récupérer les constantes
+            try:
+                plate_types = self.main_window.get_plate_types()
+                acquisition_modes = self.main_window.get_acquisition_modes()
+            except Exception as e:
+                logger.error(f"Erreur lors de la récupération des types de plaques ou modes d'acquisition: {str(e)}")
+                # Utiliser des valeurs par défaut
+                from zymosoft_assistant.utils.constants import PLATE_TYPES, ACQUISITION_MODES
+                plate_types = PLATE_TYPES
+                acquisition_modes = ACQUISITION_MODES
 
-            plate_type_name = next((pt['name'] for pt in plate_types if pt['id'] == plate_type_id), "Inconnu")
-            mode_name = next((m['name'] for m in acquisition_modes if m['id'] == mode_id), "Inconnu")
+            # Ajouter les acquisitions à l'historique
+            for acquisition in acquisitions:
+                # Récupérer les noms lisibles
+                plate_type_id = acquisition.get('plate_type', '')
+                mode_id = acquisition.get('mode', '')
 
-            # Statut
-            status = "✓ Validée" if acquisition.get('validated', False) else "✗ Invalidée"
+                plate_type_name = next((pt['name'] for pt in plate_types if pt['id'] == plate_type_id), "Inconnu")
+                mode_name = next((m['name'] for m in acquisition_modes if m['id'] == mode_id), "Inconnu")
 
-            # Créer l'élément
-            item = QTreeWidgetItem([str(acquisition.get('id', '')), plate_type_name, mode_name, status])
+                # Statut
+                status = "✓ Validée" if acquisition.get('validated', False) else "✗ Invalidée"
 
-            # Définir la couleur en fonction du statut
-            if acquisition.get('validated', False):
-                item.setForeground(3, Qt.green)
-            else:
-                item.setForeground(3, Qt.red)
+                # Créer l'élément
+                item = QTreeWidgetItem([str(acquisition.get('id', '')), plate_type_name, mode_name, status])
 
-            # Ajouter à l'arbre
-            self.history_tree.addTopLevelItem(item)
+                # Définir la couleur en fonction du statut
+                if acquisition.get('validated', False):
+                    item.setForeground(3, Qt.green)
+                else:
+                    item.setForeground(3, Qt.red)
+
+                # Ajouter à l'arbre
+                self.history_tree.addTopLevelItem(item)
+        except Exception as e:
+            logger.error(f"Erreur dans _update_history: {str(e)}", exc_info=True)
 
     def _finalize_installation(self):
         """
@@ -306,18 +324,30 @@ class Step4Closure(StepFrame):
             # Passer en mode client
             if self.client_mode_var:
                 self._update_progress(10, "Passage en mode client...")
-                self._set_client_mode()
+                try:
+                    self._set_client_mode()
+                except Exception as e:
+                    logger.error(f"Erreur lors du passage en mode client: {str(e)}", exc_info=True)
+                    # Continuer malgré l'erreur
                 time.sleep(0.5)  # Simuler un traitement
 
             # Nettoyer le PC
             if self.clean_pc_var:
                 self._update_progress(30, "Nettoyage du PC...")
-                self._clean_pc()
+                try:
+                    self._clean_pc()
+                except Exception as e:
+                    logger.error(f"Erreur lors du nettoyage du PC: {str(e)}", exc_info=True)
+                    # Continuer malgré l'erreur
                 time.sleep(0.5)  # Simuler un traitement
 
             # Générer le rapport final
             self._update_progress(60, "Génération du rapport final...")
-            self._do_generate_final_report()
+            try:
+                self._do_generate_final_report()
+            except Exception as e:
+                logger.error(f"Erreur lors de la génération du rapport final: {str(e)}", exc_info=True)
+                # Continuer malgré l'erreur
             time.sleep(0.5)  # Simuler un traitement
 
             # Finalisation
@@ -391,15 +421,58 @@ class Step4Closure(StepFrame):
         try:
             # Récupérer le chemin du fichier Config.ini
             zymosoft_path = self.main_window.session_data.get("zymosoft_path", "")
+
+            if not zymosoft_path:
+                logger.warning("Chemin ZymoSoft non défini dans les données de session")
+                # Utiliser le chemin par défaut
+                from zymosoft_assistant.utils.constants import ZYMOSOFT_BASE_PATH
+                zymosoft_path = ZYMOSOFT_BASE_PATH
+
             config_path = os.path.join(zymosoft_path, "etc", "Config.ini")
 
+            # Vérifier si le dossier etc existe
+            etc_dir = os.path.join(zymosoft_path, "etc")
+            if not os.path.exists(etc_dir):
+                try:
+                    os.makedirs(etc_dir, exist_ok=True)
+                    logger.info(f"Dossier etc créé: {etc_dir}")
+                except Exception as e:
+                    logger.error(f"Impossible de créer le dossier etc: {str(e)}")
+                    # Continuer malgré l'erreur
+
+            # Vérifier si le fichier Config.ini existe
             if not os.path.exists(config_path):
-                logger.error(f"Fichier Config.ini introuvable: {config_path}")
-                raise FileNotFoundError(f"Fichier Config.ini introuvable: {config_path}")
+                logger.warning(f"Fichier Config.ini introuvable: {config_path}")
+                # Créer un fichier Config.ini minimal
+                try:
+                    with open(config_path, 'w') as f:
+                        f.write("[Application]\nExpertMode=false\n")
+                    logger.info(f"Fichier Config.ini créé: {config_path}")
+                    self.actions_status["client_mode"] = True
+                    return
+                except Exception as e:
+                    logger.error(f"Impossible de créer le fichier Config.ini: {str(e)}")
+                    # Ne pas lever d'exception, juste marquer l'action comme échouée
+                    self.actions_status["client_mode"] = False
+                    return
 
             # Lire le fichier
-            with open(config_path, 'r') as f:
-                lines = f.readlines()
+            try:
+                with open(config_path, 'r') as f:
+                    lines = f.readlines()
+            except Exception as e:
+                logger.error(f"Erreur lors de la lecture du fichier Config.ini: {str(e)}")
+                # Créer un nouveau fichier
+                try:
+                    with open(config_path, 'w') as f:
+                        f.write("[Application]\nExpertMode=false\n")
+                    logger.info(f"Fichier Config.ini recréé: {config_path}")
+                    self.actions_status["client_mode"] = True
+                    return
+                except Exception as e2:
+                    logger.error(f"Impossible de créer le fichier Config.ini: {str(e2)}")
+                    self.actions_status["client_mode"] = False
+                    return
 
             # Modifier la ligne ExpertMode
             modified = False
@@ -435,14 +508,19 @@ class Step4Closure(StepFrame):
                     modified = True
 
             # Écrire le fichier modifié
-            with open(config_path, 'w') as f:
-                f.writelines(lines)
+            try:
+                with open(config_path, 'w') as f:
+                    f.writelines(lines)
+                logger.info(f"Mode client activé dans {config_path}")
+                self.actions_status["client_mode"] = True
+            except Exception as e:
+                logger.error(f"Erreur lors de l'écriture du fichier Config.ini: {str(e)}")
+                self.actions_status["client_mode"] = False
 
-            logger.info(f"Mode client activé dans {config_path}")
-            self.actions_status["client_mode"] = True
         except Exception as e:
             logger.error(f"Erreur lors du passage en mode client: {str(e)}", exc_info=True)
-            raise
+            self.actions_status["client_mode"] = False
+            # Ne pas lever d'exception pour éviter d'interrompre le processus de finalisation
 
     def _clean_pc(self):
         """
@@ -587,6 +665,32 @@ class Step4Closure(StepFrame):
 
         logger.info("Données de l'étape 4 sauvegardées")
 
+    def execute_cleanup_actions(self):
+        """
+        Exécute les actions de nettoyage lors de la finalisation
+        Cette méthode est appelée par la fenêtre principale lors de la finalisation
+        """
+        # Récupérer les commentaires
+        self.general_comments = self.comments_text.toPlainText().strip()
+
+        # Sauvegarder les données
+        self.save_data()
+
+        # Exécuter les actions directement (sans thread)
+        self._execute_actions()
+
+        return True
+
+    def generate_final_report(self):
+        """
+        Génère le rapport final
+        Cette méthode est appelée par la fenêtre principale lors de la finalisation
+
+        Returns:
+            Le chemin vers le rapport généré
+        """
+        return self._do_generate_final_report()
+
     def load_data(self):
         """
         Charge les données de la session dans l'étape 4
@@ -667,8 +771,11 @@ class Step4Closure(StepFrame):
         """
         Appelé lorsque l'étape est affichée
         """
-        # Mettre à jour l'historique
-        self._update_history()
+        try:
+            # Mettre à jour l'historique
+            self._update_history()
 
-        # Mettre à jour le résumé
-        self._update_summary()
+            # Mettre à jour le résumé
+            self._update_summary()
+        except Exception as e:
+            logger.error(f"Erreur lors de l'affichage de l'étape 4: {str(e)}", exc_info=True)

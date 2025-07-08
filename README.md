@@ -378,6 +378,27 @@ class ReportGenerator:
 pip install -r requirements.txt
 ```
 
+> **IMPORTANT**: Ce projet nécessite NumPy 1.x et n'est pas compatible avec NumPy 2.x. Le fichier requirements.txt spécifie `numpy<2.0.0` pour garantir la compatibilité.
+
+### Résolution des problèmes courants
+
+#### Erreur de compatibilité NumPy
+Si vous rencontrez l'erreur suivante:
+```
+AttributeError: _ARRAY_API not found
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.2.6 as it may crash.
+```
+
+Solution:
+1. Désinstallez NumPy 2.x: `pip uninstall numpy`
+2. Installez NumPy 1.x: `pip install "numpy<2.0.0"`
+3. Ou simplement: `pip install -r requirements.txt`
+
+#### Erreur de création de dossier
+Si vous rencontrez une erreur `FileNotFoundError` lors de la création de dossiers, assurez-vous que les chemins parents existent ou utilisez `os.makedirs(path, exist_ok=True)` au lieu de `os.mkdir(path)`.
+
 ### Packaging
 - **PyInstaller** pour créer un exécutable standalone
 - **NSIS** pour l'installateur Windows

@@ -6,14 +6,14 @@ Module de fonctions utilitaires pour l'assistant d'installation ZymoSoft
 """
 
 import os
-import re
 import uuid
 import json
 import logging
 import configparser
 import shutil
 import datetime
-from typing import Dict, Any, List, Optional, Tuple, Union
+import pefile
+from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
 from .constants import TEMP_DIR, REPORTS_DIR
@@ -84,6 +84,20 @@ def extract_version_from_path(path: str) -> str:
         return "inconnue"
         
     return path_obj.name.replace("ZymoSoft_V", "")
+
+def get_exe_version(file_path):
+    try:
+        pe = pefile.PE(file_path)
+        for file_info in pe.FileInfo:
+            for entry in file_info:
+                if entry.Key == b'StringFileInfo':
+                    for string_table in entry.StringTable:
+                        for key, value in string_table.entries.items():
+                            if key.decode() == "FileVersion":
+                                return value.decode()
+    except Exception as e:
+        return f"Error reading version: {e}"
+
 
 def save_session_data(data: Dict[str, Any], filename: str = None) -> str:
     """

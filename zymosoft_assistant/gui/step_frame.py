@@ -7,10 +7,11 @@ Module contenant la classe de base pour les frames d'étapes de l'assistant d'in
 
 import logging
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtCore import QObject
 
 logger = logging.getLogger(__name__)
 
-class StepFrame:
+class StepFrame(QObject):
     """
     Classe de base pour les frames d'étapes
     """
@@ -23,6 +24,7 @@ class StepFrame:
             parent: Widget parent
             main_window: Référence vers la fenêtre principale
         """
+        super().__init__(parent)  # Initialize QObject with parent
         self.parent = parent
         self.main_window = main_window
         self.widget = QWidget(parent)

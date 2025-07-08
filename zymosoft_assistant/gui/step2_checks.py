@@ -83,18 +83,6 @@ class Step2Checks(StepFrame):
         main_layout = QVBoxLayout()
         self.layout.addLayout(main_layout)
 
-        # Titre de l'étape
-        title_label = QLabel("Étape 2 : Vérifications pré-validation")
-        title_label.setStyleSheet(f"font-size: 18pt; font-weight: bold; color: {COLOR_SCHEME['primary']};")
-        main_layout.addWidget(title_label)
-        main_layout.addSpacing(20)
-
-        # Description
-        description_label = QLabel("Vérification de l'installation ZymoSoft et des fichiers de configuration.")
-        description_label.setWordWrap(True)
-        description_label.setMinimumWidth(600)
-        main_layout.addWidget(description_label)
-        main_layout.addSpacing(20)
 
         # Sélection du chemin d'installation
         path_frame = QFrame()
