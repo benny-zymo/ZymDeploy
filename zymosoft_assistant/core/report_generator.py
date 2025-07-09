@@ -414,6 +414,90 @@ class ReportGenerator:
             elements.append(stats_table)
             elements.append(Spacer(1, 0.15*inch))
 
+        # Résultats de validation (comparaison aux références)
+        validation = analysis.get("validation", {})
+        if validation and "comparison" in validation:
+            elements.append(Paragraph("Résultats de validation (comparaison aux références)", heading_style))
+
+            # Import des critères de validation
+            from zymosoft_assistant.utils.constants import VALIDATION_CRITERIA
+
+            comp = validation["comparison"]
+
+            # Préparation des données pour le tableau
+            validation_data = [
+                ["Paramètre", "Valeur", "Critère de référence", "Statut"]
+            ]
+
+            # Définition des paramètres à afficher
+            validation_params = [
+                ("Pente (validation)", comp.get("slope", 0), "slope"),
+                ("Ordonnée à l'origine (validation)", comp.get("intercept", 0), "intercept"),
+                ("R² (validation)", comp.get("r_value", 0), "r2"),
+                ("Points hors tolérance", comp.get("nb_puits_loin_fit", "N/A"), "nb_puits_loin_fit"),
+                ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%", None),
+                ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%", None)
+            ]
+
+            # Création des lignes du tableau avec vérification des critères
+            for param, value, criteria_key in validation_params:
+                status = ""
+                criteria_text = ""
+
+                if criteria_key and criteria_key in VALIDATION_CRITERIA:
+                    criteria = VALIDATION_CRITERIA[criteria_key]
+
+                    # Formatage du texte des critères
+                    if criteria_key == "r2":
+                        criteria_text = f"> {criteria['min']}"
+                    else:
+                        criteria_text = f"{criteria['min']} - {criteria['max']}"
+
+                    # Vérification si la valeur respecte les critères
+                    try:
+                        val = float(value) if isinstance(value, (int, float)) else 0
+                        is_valid = val >= criteria['min'] and val <= criteria['max']
+                        status = "✓" if is_valid else "✗"
+                    except (ValueError, TypeError):
+                        status = "?"
+
+                # Formatage de la valeur pour l'affichage
+                if isinstance(value, (int, float)):
+                    formatted_value = f"{value:.4f}" if criteria_key in ["slope", "intercept", "r2"] else str(value)
+                else:
+                    formatted_value = str(value)
+
+                validation_data.append([param, formatted_value, criteria_text, status])
+
+            # Création du tableau avec style
+            validation_table = Table(validation_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 0.5*inch])
+
+            # Style de base du tableau
+            table_style = TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (1, 1), (3, -1), 'CENTER'),
+            ])
+
+            # Ajout de couleurs conditionnelles pour la colonne de statut
+            for i, row in enumerate(validation_data[1:], 1):
+                if row[3] == "✓":
+                    table_style.add('TEXTCOLOR', (3, i), (3, i), colors.green)
+                    table_style.add('FONTNAME', (3, i), (3, i), 'Helvetica-Bold')
+                elif row[3] == "✗":
+                    table_style.add('TEXTCOLOR', (3, i), (3, i), colors.red)
+                    table_style.add('FONTNAME', (3, i), (3, i), 'Helvetica-Bold')
+
+            validation_table.setStyle(table_style)
+            elements.append(validation_table)
+            elements.append(Spacer(1, 0.15*inch))
+
         # Graphiques
         graphs = analysis.get("graphs", [])
         if graphs:

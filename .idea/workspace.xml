@@ -4,23 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="70acc574-1de3-4cde-b8e4-3bf8e216d535" name="Changes" comment="Add thread-safe communication and summary tab to Step2Checks&#10;&#10;- Introduced `Step2Helper` class using `QObject` for thread-safe signals.&#10;- Integrated signals for progress updates, results display, and error handling.&#10;- Added a new &quot;Summary&quot; tab with a detailed verification results overview.">
-      <change afterPath="$PROJECT_DIR$/zymosoft_assistant/scripts/Routine_VALIDATION_ZC_18022025.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/zymosoft_assistant/scripts/home_made_tools_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/ZymDeploy.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/ZymDeploy.iml" afterDir="false" />
+    <list default="true" id="70acc574-1de3-4cde-b8e4-3bf8e216d535" name="Changes" comment="Add placeholder comment in `Routine_VALIDATION_ZC_18022025.py`">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.replit" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/core/acquisition_analyzer.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/core/acquisition_analyzer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/core/config_checker.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/core/config_checker.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/zymosoft_assistant/core/report_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/core/report_generator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/main_window.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step1_info.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step1_info.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step2_checks.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step2_checks.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step3_acquisition.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step3_acquisition.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step4_closure.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step4_closure.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step_frame.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step_frame.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/zymosoft_assistant/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/scripts/Routine_VALIDATION_ZC_18022025.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/scripts/Routine_VALIDATION_ZC_18022025.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/zymosoft_assistant/utils/constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/utils/constants.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/zymosoft_assistant/utils/helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/utils/helpers.py" afterDir="false" />
     </list>
@@ -41,6 +30,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
@@ -66,28 +60,29 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.cli.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main_window.executor&quot;: &quot;Run&quot;,
-    &quot;Python.step1_info.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.Routine_VALIDATION_ZC_18022025.executor": "Run",
+    "Python.cli.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.main_window.executor": "Run",
+    "Python.step1_info.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "test/ajout-dosé",
+    "junie.onboarding.icon.badge.shown": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "run.code.analysis.last.selected.profile": "aDefault",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\PCP-Zymoptiq\PycharmProjects\ZymDeploy\zymosoft_assistant\scripts" />
@@ -114,7 +109,9 @@
       <workItem from="1751448711437" duration="2000" />
       <workItem from="1751457709628" duration="25191000" />
       <workItem from="1751884459367" duration="14430000" />
-      <workItem from="1751965037911" duration="11874000" />
+      <workItem from="1751965037911" duration="15623000" />
+      <workItem from="1752050412662" duration="980000" />
+      <workItem from="1752063783240" duration="7033000" />
     </task>
     <task id="LOCAL-00001" summary="Add GUI step modules for installation assistant: Step1Info and Step2Checks.">
       <option name="closed" value="true" />
@@ -132,7 +129,31 @@
       <option name="project" value="LOCAL" />
       <updated>1751369923352</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Refactor Step1Info and MainWindow UI for enhanced design consistency:&#10;&#10;- Added structured sections and reusable components to Step1Info for streamlined widget creation.&#10;- Updated visual styles, specifically for error handling and form validation.&#10;- Reorganized MainWindow UI layout with a sidebar and improved navigation handling.&#10;- Enhanced progress indicator styling with support for multiple statuses.">
+      <option name="closed" value="true" />
+      <created>1751986013779</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1751986013779</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Add comment in `Routine_VALIDATION_ZC_18022025.py` to clarify function purpose">
+      <option name="closed" value="true" />
+      <created>1752050500094</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1752050500094</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Add placeholder comment in `Routine_VALIDATION_ZC_18022025.py`">
+      <option name="closed" value="true" />
+      <created>1752050560546</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1752050560546</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -141,11 +162,27 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Add GUI step modules for installation assistant: Step1Info and Step2Checks." />
     <MESSAGE value="Add thread-safe communication and summary tab to Step2Checks&#10;&#10;- Introduced `Step2Helper` class using `QObject` for thread-safe signals.&#10;- Integrated signals for progress updates, results display, and error handling.&#10;- Added a new &quot;Summary&quot; tab with a detailed verification results overview." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add thread-safe communication and summary tab to Step2Checks&#10;&#10;- Introduced `Step2Helper` class using `QObject` for thread-safe signals.&#10;- Integrated signals for progress updates, results display, and error handling.&#10;- Added a new &quot;Summary&quot; tab with a detailed verification results overview." />
+    <MESSAGE value="Refactor Step1Info and MainWindow UI for enhanced design consistency:&#10;&#10;- Added structured sections and reusable components to Step1Info for streamlined widget creation.&#10;- Updated visual styles, specifically for error handling and form validation.&#10;- Reorganized MainWindow UI layout with a sidebar and improved navigation handling.&#10;- Enhanced progress indicator styling with support for multiple statuses." />
+    <MESSAGE value="Add comment in `Routine_VALIDATION_ZC_18022025.py` to clarify function purpose" />
+    <MESSAGE value="Add placeholder comment in `Routine_VALIDATION_ZC_18022025.py`" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add placeholder comment in `Routine_VALIDATION_ZC_18022025.py`" />
+  </component>
+  <component name="XDebuggerManager">
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="zymosoft_assistant.core.config_checker" language="Python" />
+        <watch expression="zymosoft_assistant.core.config_checker.ConfigChecker.base_path" language="Python" />
+        <watch expression="zymosoft_assistant.core.config_checker" language="Python" />
+        <watch expression="zymosoft_assistant.main.MainWindow.current_step_index" language="Python" />
+        <watch expression="zymosoft_assistant.main.MainWindow.current_step_index" language="Python" />
+        <watch expression="zymosoft_assistant.main.MainWindow.current_step_index" language="Python" />
+      </configuration>
+    </watches-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/ZymDeploy$Routine_VALIDATION_ZC_18022025.coverage" NAME="Routine_VALIDATION_ZC_18022025 Coverage Results" MODIFIED="1752065358348" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/scripts" />
     <SUITE FILE_PATH="coverage/ZymDeploy$step1_info.coverage" NAME="step1_info Coverage Results" MODIFIED="1751963229228" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/gui" />
-    <SUITE FILE_PATH="coverage/ZymDeploy$main.coverage" NAME="main Coverage Results" MODIFIED="1751985602351" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant" />
+    <SUITE FILE_PATH="coverage/ZymDeploy$main.coverage" NAME="main Coverage Results" MODIFIED="1752069267638" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant" />
     <SUITE FILE_PATH="coverage/ZymDeploy$main_window.coverage" NAME="main_window Coverage Results" MODIFIED="1751356687010" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/gui" />
     <SUITE FILE_PATH="coverage/ZymDeploy$cli.coverage" NAME="cli Coverage Results" MODIFIED="1751540989106" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/cli" />
   </component>

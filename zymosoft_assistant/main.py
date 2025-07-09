@@ -85,10 +85,18 @@ def check_numpy_version():
 check_numpy_version()
 
 from zymosoft_assistant.gui.main_window import MainWindow
+from zymosoft_assistant.utils.helpers import resource_path
+from zymosoft_assistant.utils.constants import APP_CONFIG
+
 def main():
     """Point d'entrée principal de l'application"""
     try:
         logger.info("Démarrage du ZymDeploy")
+
+        # Configuration de l'icône de l'application
+        icon_path = resource_path("assets\\icons\\icon.ico")
+        APP_CONFIG['icon_path'] = icon_path
+        logger.info(f"Chemin de l'icône de l'application: {icon_path}")
 
         # Création de l'application Qt
         app = QApplication(sys.argv)

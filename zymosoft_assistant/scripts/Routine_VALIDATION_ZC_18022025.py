@@ -1120,8 +1120,8 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
     # retourne 2 listes :
     # liste concernant l'acquisition à la machine de référence (instrument 1) :
     #
-    # 'Nom de l Acquisitions;Machine;LOD;LOQ;Sensibilite (en U/mL);CV % deg a 30%;
-    # CV % deg a 50%;CV % deg a 70%;diff % Activite Ech_1 (U/mL);diff % RSD Ech_2 
+    # 'Nom de l Acquisitions;Machine; zone ; LOD;LOQ;Sensibilite (en U/mL);CV % deg a 30%;
+    # CV % deg a 50%;CV % deg a 70%; diff % Activite Ech_1 (U/mL);diff % RSD Ech_2
     # (%)(autant de fois qu'il y a d'échantillons différents déclarés dans le plan de plaque);
     #
     # liste concernant l'acquisition à la machine à valider (instrument 2) ET 
@@ -1179,16 +1179,22 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
 
     df = pandas.read_excel(chemin_well_result_reference,sheet_name=onglet)
     results_Reference = df.values.tolist()
-    # print('results_Reference : \n',results_Reference)
+    print('results_Reference : \n',results_Reference)
 
+    print('len(results_Reference) : ',len(results_Reference))
     if results_Reference[-1] == [] or results_Reference[-1] == [';;;;;;;;;'] or results_Reference[-1] == [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]:
+        print('Dernière ligne vide ou non renseignée, suppression de la dernière ligne.')
+        print(results_Reference[-1])
         results_Reference.pop()
 
+    print(f'première ligne de results_Reference : {results_Reference[0]}')
     if results_Reference[0][0] == 'Plate Reference': # le premier onglet à un paragraphe de plus que les suivants (qui comporte les info date, heure, référence plaque, ce qui correspond à l'en-tête)
         start_stop = []
         j_1 = 0
         while len(start_stop) < 7 and j_1 < len(results_Reference):
+            # On cherche les lignes vides ou les lignes qui contiennent uniquement des séparateurs
             if results_Reference[j_1] == []  or results_Reference[j_1] == [';;;;;;;;;'] or results_Reference[j_1] == [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]:
+                print(f'Ajout de l\'index {j_1} à start_stop')
                 start_stop.append(j_1)
             j_1 += 1
 
@@ -1217,20 +1223,28 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
         #     SampleDetail_Reference.append(results_Reference[k+start_stop[3]+3])
 
         for k in range(start_stop[1]-3):
+            print(f' entete refernece results_Reference[{k+3}] : {results_Reference[k+3]}')
             Entete_Reference.append(results_Reference[k+3])
         for k in range(start_stop[2] - start_stop[1] - 3):
+            print(f' blanc reference results_Reference[{k+start_stop[1]+3}] : {results_Reference[k+start_stop[1]+3]}')
             Blank_Reference.append(results_Reference[k+start_stop[1]+3])
         for k in range(start_stop[4] - start_stop[3] - 3):
+            print(f' gamme reference results_Reference[{k+start_stop[3]+3}] : {results_Reference[k+start_stop[3]+3]}')
             Gamme_Reference.append(results_Reference[k+start_stop[3]+3])
         for k in range(start_stop[5] - start_stop[4] - 3):
+            print(f' sample reference results_Reference[{k+start_stop[4]+3}] : {results_Reference[k+start_stop[4]+3]}')
             Sample_Reference.append(results_Reference[k+start_stop[4]+3])
         for k in range(len(results_Reference) - start_stop[6] - 3):
+            print(f' sample detail reference results_Reference[{k+start_stop[6]+3}] : {results_Reference[k+start_stop[6]+3]}')
             SampleDetail_Reference.append(results_Reference[k+start_stop[6]+3])
     else:
         start_stop = []
         j_1 = 0
         while len(start_stop) < 6 and j_1 < len(results_Reference):
+
+            # On cherche les lignes vides ou les lignes qui contiennent uniquement des séparateurs
             if results_Reference[j_1] == []  or results_Reference[j_1] == [';;;;;;;;;'] or results_Reference[j_1] == [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]:
+                print(f'Ajout de l\'index {j_1} à start_stop séparateur')
                 start_stop.append(j_1)
             j_1 += 1
 
@@ -1259,14 +1273,19 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
         #     SampleDetail_Reference.append(results_Reference[k+start_stop[3]+3])
 
         for k in range(start_stop[0]):
+            print(f' entete refernece results_Reference[{k+3}] : {results_Reference[k+3]}')
             Entete_Reference.append(results_Reference[k])
         for k in range(start_stop[1] - start_stop[0] - 3):
+            print(f' blanc reference results_Reference[{k+start_stop[0]+3}] : {results_Reference[k+start_stop[0]+3]}')
             Blank_Reference.append(results_Reference[k+start_stop[0]+3])
         for k in range(start_stop[3] - start_stop[2] - 3):
+            print(f' gamme reference results_Reference[{k+start_stop[2]+3}] : {results_Reference[k+start_stop[2]+3]}')
             Gamme_Reference.append(results_Reference[k+start_stop[2]+3])
         for k in range(start_stop[4] - start_stop[3] - 3):
+            print(f' sample reference results_Reference[{k+start_stop[3]+3}] : {results_Reference[k+start_stop[3]+3]}')
             Sample_Reference.append(results_Reference[k+start_stop[3]+3])
         for k in range(len(results_Reference) - start_stop[5] - 3):
+            print(f' sample detail reference results_Reference[{k+start_stop[5]+3}] : {results_Reference[k+start_stop[5]+3]}')
             SampleDetail_Reference.append(results_Reference[k+start_stop[5]+3])
 
     ## Ces listes sont des tableaux 1D, chaque ligne n'est pas encore séparée
@@ -1497,7 +1516,7 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
     deg_70 = []
     positions_70 = []
     for k in range(len(Gamme_R)):
-        if Gamme_R[k][4] == 'False':
+        if Gamme_R[k][4] == 'False':  # le puit n'est pas exclu
             if float(Gamme_R[k][3]) == activites_deg[0][1]:
                 positions_30.append(Gamme_R[k][0])
                 if Gamme_R[k][2] == '':

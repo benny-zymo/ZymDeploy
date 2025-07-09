@@ -12,6 +12,7 @@ import time
 import sys
 from PIL import Image, ImageQt
 import uuid
+import pandas
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
                              QPushButton, QFrame, QFileDialog, QMessageBox,
                              QProgressBar, QTabWidget, QWidget, QScrollArea,
@@ -707,9 +708,61 @@ class Step3Acquisition(StepFrame):
             image_label.setAlignment(Qt.AlignCenter)
             layout.addWidget(image_label)
 
-            # Afficher l'image à sa taille originale
-            image = self.graph_images[self.current_image_index]
-            image_label.setPixmap(image)
+            # Classe pour stocker l'index de l'image actuellement affichée dans le dialogue
+            class ImageIndex:
+                def __init__(self, value):
+                    self.value = value
+
+            current_dialog_image = ImageIndex(self.current_image_index)
+
+            # Boutons de navigation
+            nav_layout = QHBoxLayout()
+
+            # Bouton précédent
+            prev_button = QPushButton("< Précédent")
+            prev_button.setEnabled(current_dialog_image.value > 0)
+            nav_layout.addWidget(prev_button)
+
+            # Compteur d'images
+            image_counter = QLabel(f"{current_dialog_image.value + 1}/{len(self.graph_images)}")
+            image_counter.setAlignment(Qt.AlignCenter)
+            nav_layout.addWidget(image_counter)
+
+            # Bouton suivant
+            next_button = QPushButton("Suivant >")
+            next_button.setEnabled(current_dialog_image.value < len(self.graph_images) - 1)
+            nav_layout.addWidget(next_button)
+
+            # Fonction pour mettre à jour l'image affichée dans le dialogue
+            def update_dialog_image():
+                if 0 <= current_dialog_image.value < len(self.graph_images):
+                    image = self.graph_images[current_dialog_image.value]
+                    image_label.setPixmap(image)
+                    dialog.setWindowTitle(self.graph_titles[current_dialog_image.value] if current_dialog_image.value < len(self.graph_titles) else "Image")
+                    prev_button.setEnabled(current_dialog_image.value > 0)
+                    next_button.setEnabled(current_dialog_image.value < len(self.graph_images) - 1)
+                    image_counter.setText(f"{current_dialog_image.value + 1}/{len(self.graph_images)}")
+
+            # Fonction pour passer à l'image précédente
+            def show_previous_image():
+                if current_dialog_image.value > 0:
+                    current_dialog_image.value -= 1
+                    update_dialog_image()
+
+            # Fonction pour passer à l'image suivante
+            def show_next_image():
+                if current_dialog_image.value < len(self.graph_images) - 1:
+                    current_dialog_image.value += 1
+                    update_dialog_image()
+
+            # Connect button signals
+            prev_button.clicked.connect(show_previous_image)
+            next_button.clicked.connect(show_next_image)
+
+            # Afficher l'image initiale
+            update_dialog_image()
+
+            layout.addLayout(nav_layout)
 
             # Bouton pour fermer la boîte de dialogue
             close_button = QPushButton("Fermer")
@@ -882,7 +935,7 @@ class Step3Acquisition(StepFrame):
                     reference_machine = "REFERENCE ZYMOPTIQ"
 
 
-                    
+
                     if self.do_compare_to_ref:   # comparaison volumes et épaissseurs
                         self.progress_updated.emit(50, "Comparaison aux références...")
                         try:
@@ -943,18 +996,85 @@ class Step3Acquisition(StepFrame):
                                 acquisition_name_instrument_2 = results_subfolders[0]
 
                                 # Exécuter la comparaison enzymatique avec les dossiers parents
-                                ref_data, validation_data = compare_enzymo_2_ref(
-                                    reference_parent_folder, reference_machine, acquisition_name_instrument_1, "Area 1",
-                                    results_parent_folder, machine_to_validate, acquisition_name_instrument_2,
-                                    validation_output_dir
-                                )
+                                # Créer un dossier pour stocker les résultats de comparaison
+                                comparison_dir = os.path.join(validation_output_dir, "comparaison_enzymo_routine")
+                                if not os.path.exists(comparison_dir):
+                                    os.makedirs(comparison_dir)
 
-                                print(f"Référence: {ref_data}, Validation: {validation_data}")
+                                # Récupérer tous les onglets du fichier Excel
+                                excel_path = os.path.join(reference_parent_folder, acquisition_name_instrument_1, 'WellResults.xlsx')
+                                all_results = []
 
-                                validation_results["enzymo_comparison"] = {
-                                    "reference_data": ref_data,
-                                    "validation_data": validation_data
-                                }
+                                if os.path.exists(excel_path):
+                                    excel_file = pandas.ExcelFile(excel_path)
+                                    sheet_names = excel_file.sheet_names
+
+                                    # Itérer sur tous les onglets
+                                    for sheet_name in sheet_names:
+                                        try:
+                                            ref_data, validation_data = compare_enzymo_2_ref(
+                                                reference_parent_folder, reference_machine, acquisition_name_instrument_1, sheet_name,
+                                                results_parent_folder, machine_to_validate, acquisition_name_instrument_2,
+                                                comparison_dir
+                                            )
+
+                                            all_results.append(ref_data)
+                                            all_results.append(validation_data)
+
+                                            print(f"Onglet {sheet_name} - Référence: {ref_data}, Validation: {validation_data}")
+                                        except Exception as e:
+                                            logger.error(f"Erreur lors de la comparaison pour l'onglet {sheet_name}: {str(e)}", exc_info=True)
+
+                                    # Créer le fichier CSV de résultats
+                                    if all_results:
+                                        find_len_max = 0
+                                        for result in all_results:
+                                            if len(result) > find_len_max:
+                                                find_len_max = len(result)
+
+                                        csv_path = os.path.join(comparison_dir, 'data_compar_enzymo_2_ref.csv')
+                                        try:
+                                            with open(csv_path, 'w') as csv_out:
+                                                # Écrire l'en-tête
+                                                csv_out.write('Nom de l Acquisitions;Machine;Zone;LOD;LOQ;Sensibilite (en U/mL);CV % deg a 30%;CV % deg a 50%;CV % deg a 70%;')
+
+                                                # Calculer le nombre d'échantillons
+                                                nb_echantillons = max(0, int((find_len_max-14)/4))
+
+                                                # Ajouter les colonnes pour chaque échantillon
+                                                for i in range(nb_echantillons):
+                                                    csv_out.write('Activite Ech_' + str(i+1) + ' (U/mL);RSD Ech_' + str(i+1) + ' (%);')
+
+                                                # Ajouter les colonnes de différence
+                                                csv_out.write('diff % LOD;diff % LOQ;diff % Sensibilite (en U/mL);diff % CV % deg a 30%;diff % CV % deg a 50%;diff % CV % deg a 70%;')
+
+                                                for i in range(nb_echantillons):
+                                                    csv_out.write('diff % Activite Ech_' + str(i+1) + ' (U/mL);diff % RSD Ech_' + str(i+1) + ' (%);')
+
+                                                csv_out.write('\n')
+
+                                                # Écrire les données
+                                                for result in all_results:
+                                                    for value in result:
+                                                        csv_out.write(str(value) + ';')
+                                                    csv_out.write('\n')
+
+                                            logger.info(f"Résultats écrits dans {csv_path}")
+                                        except Exception as e:
+                                            logger.error(f"Erreur lors de l'écriture des résultats dans {csv_path}: {str(e)}", exc_info=True)
+                                else:
+                                    logger.error(f"Le fichier WellResults.xlsx n'existe pas dans {os.path.dirname(excel_path)}")
+
+                                # Stocker les résultats pour l'affichage
+                                if all_results and len(all_results) >= 2:
+                                    # Utiliser les premiers résultats pour l'affichage
+                                    validation_results["enzymo_comparison"] = {
+                                        "reference_data": all_results[0],
+                                        "validation_data": all_results[1],
+                                        "all_results": all_results
+                                    }
+                                else:
+                                    validation_results["enzymo_comparison_error"] = "Aucun résultat obtenu pour la comparaison enzymatique"
                             else:
                                 validation_results[
                                     "enzymo_comparison_error"] = "Sous-dossiers d'acquisition non trouvés"
@@ -1091,6 +1211,19 @@ class Step3Acquisition(StepFrame):
                 logger.error("Erreur dans _display_statistics: self.stats_table est None")
                 return
 
+            # Rendre la table non éditable
+            self.stats_table.setEditTriggers(QTableWidget.NoEditTriggers)
+
+            # Ajout d'une colonne pour les critères de référence
+            self.stats_table.setColumnCount(3)
+            self.stats_table.setHorizontalHeaderLabels(["Paramètre", "Valeur", "Critère de référence"])
+
+            # Ajuster la largeur des colonnes
+            header = self.stats_table.horizontalHeader()
+            header.setSectionResizeMode(0, QHeaderView.Stretch)
+            header.setSectionResizeMode(1, QHeaderView.Stretch)
+            header.setSectionResizeMode(2, QHeaderView.Stretch)
+
             self.stats_table.setRowCount(0)
 
             # Statistiques standard
@@ -1109,6 +1242,7 @@ class Step3Acquisition(StepFrame):
                     self.stats_table.insertRow(row)
                     self.stats_table.setItem(row, 0, QTableWidgetItem(param))
                     self.stats_table.setItem(row, 1, QTableWidgetItem(value))
+                    self.stats_table.setItem(row, 2, QTableWidgetItem(""))
 
             # Statistiques de validation
             validation = self.analysis_results.get("validation", {})
@@ -1118,24 +1252,75 @@ class Step3Acquisition(StepFrame):
                 self.stats_table.insertRow(row)
                 self.stats_table.setItem(row, 0, QTableWidgetItem("--- Résultats de validation ---"))
                 self.stats_table.setItem(row, 1, QTableWidgetItem(""))
+                self.stats_table.setItem(row, 2, QTableWidgetItem(""))
 
                 # Statistiques de comparaison aux références
                 if 'comparison' in validation:
                     comp = validation['comparison']
+
+                    # Import des critères de validation
+                    from zymosoft_assistant.utils.constants import VALIDATION_CRITERIA
+
+                    # Création des items avec vérification des critères
                     comp_items = [
-                        ("Pente (validation)", f"{comp.get('slope', 0):.4f}"),
-                        ("Ordonnée à l'origine (validation)", f"{comp.get('intercept', 0):.4f}"),
-                        ("R² (validation)", f"{comp.get('r_value', 0):.4f}"),
-                        ("Points hors tolérance", str(comp.get('nb_puits_loin_fit', 'N/A'))),
-                        ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%"),
-                        ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%")
+                        ("Pente (validation)", f"{comp.get('slope', 0):.4f}", 'slope'),
+                        ("Ordonnée à l'origine (validation)", f"{comp.get('intercept', 0):.4f}", 'intercept'),
+                        ("R² (validation)", f"{comp.get('r_value', 0):.4f}", 'r2'),
+                        ("Points hors tolérance", str(comp.get('nb_puits_loin_fit', 'N/A')), 'nb_puits_loin_fit'),
+                        ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%", None),
+                        ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%", None)
                     ]
 
-                    for param, value in comp_items:
+                    for param, value, criteria_key in comp_items:
                         row = self.stats_table.rowCount()
                         self.stats_table.insertRow(row)
-                        self.stats_table.setItem(row, 0, QTableWidgetItem(param))
-                        self.stats_table.setItem(row, 1, QTableWidgetItem(value))
+
+                        # Paramètre
+                        param_item = QTableWidgetItem(param)
+                        self.stats_table.setItem(row, 0, param_item)
+
+                        # Valeur
+                        value_item = QTableWidgetItem(value)
+                        self.stats_table.setItem(row, 1, value_item)
+
+                        # Critère de référence et coloration
+                        if criteria_key and criteria_key in VALIDATION_CRITERIA:
+                            criteria = VALIDATION_CRITERIA[criteria_key]
+                            criteria_text = f"{criteria['min']} - {criteria['max']}" if criteria_key != 'r2' else f"> {criteria['min']}"
+                            criteria_item = QTableWidgetItem(criteria_text)
+                            self.stats_table.setItem(row, 2, criteria_item)
+
+                            # Vérification si la valeur respecte les critères
+                            try:
+                                if criteria_key == 'r2':
+                                    # Pour R², on utilise r_value
+                                    val = float(comp.get('r_value', 0))
+                                    is_valid = val >= criteria['min'] and val <= criteria['max']
+                                elif criteria_key == 'nb_puits_loin_fit':
+                                    # Pour les points hors tolérance
+                                    val = int(comp.get('nb_puits_loin_fit', 0))
+                                    is_valid = val >= criteria['min'] and val <= criteria['max']
+                                elif criteria_key == 'slope':
+                                    # Pour la pente
+                                    val = float(comp.get('slope', 0))
+                                    is_valid = val >= criteria['min'] and val <= criteria['max']
+                                elif criteria_key == 'intercept':
+                                    # Pour l'ordonnée à l'origine
+                                    val = float(comp.get('intercept', 0))
+                                    is_valid = val >= criteria['min'] and val <= criteria['max']
+                                else:
+                                    is_valid = True
+
+                                # Coloration de la cellule
+                                if is_valid:
+                                    value_item.setBackground(Qt.green)
+                                else:
+                                    value_item.setBackground(Qt.red)
+                            except (ValueError, TypeError):
+                                # En cas d'erreur de conversion, on ne colore pas
+                                pass
+                        else:
+                            self.stats_table.setItem(row, 2, QTableWidgetItem(""))
 
                 # Statistiques de comparaison enzymatique
                 if 'enzymo_comparison' in validation:
@@ -1146,6 +1331,7 @@ class Step3Acquisition(StepFrame):
                     self.stats_table.insertRow(row)
                     self.stats_table.setItem(row, 0, QTableWidgetItem("--- Comparaison enzymatique ---"))
                     self.stats_table.setItem(row, 1, QTableWidgetItem(""))
+                    self.stats_table.setItem(row, 2, QTableWidgetItem(""))
 
                     # Extraire et afficher quelques statistiques enzymatiques clés si disponibles
                     if isinstance(enzymo.get('validation_data'), list) and len(enzymo.get('validation_data', [])) > 0:
@@ -1169,12 +1355,14 @@ class Step3Acquisition(StepFrame):
                                         self.stats_table.insertRow(row)
                                         self.stats_table.setItem(row, 0, QTableWidgetItem(param))
                                         self.stats_table.setItem(row, 1, QTableWidgetItem(value))
+                                        self.stats_table.setItem(row, 2, QTableWidgetItem(""))
                             except Exception as e:
                                 logger.error(f"Erreur lors du parsing des données enzymatiques: {str(e)}", exc_info=True)
                                 row = self.stats_table.rowCount()
                                 self.stats_table.insertRow(row)
                                 self.stats_table.setItem(row, 0, QTableWidgetItem("Données enzymatiques"))
                                 self.stats_table.setItem(row, 1, QTableWidgetItem("Disponibles mais format non reconnu"))
+                                self.stats_table.setItem(row, 2, QTableWidgetItem(""))
 
                 # Erreurs de validation
                 if 'comparison_error' in validation or 'enzymo_comparison_error' in validation:
@@ -1182,18 +1370,21 @@ class Step3Acquisition(StepFrame):
                     self.stats_table.insertRow(row)
                     self.stats_table.setItem(row, 0, QTableWidgetItem("--- Erreurs de validation ---"))
                     self.stats_table.setItem(row, 1, QTableWidgetItem(""))
+                    self.stats_table.setItem(row, 2, QTableWidgetItem(""))
 
                     if 'comparison_error' in validation:
                         row = self.stats_table.rowCount()
                         self.stats_table.insertRow(row)
                         self.stats_table.setItem(row, 0, QTableWidgetItem("Erreur de comparaison"))
                         self.stats_table.setItem(row, 1, QTableWidgetItem(validation['comparison_error']))
+                        self.stats_table.setItem(row, 2, QTableWidgetItem(""))
 
                     if 'enzymo_comparison_error' in validation:
                         row = self.stats_table.rowCount()
                         self.stats_table.insertRow(row)
                         self.stats_table.setItem(row, 0, QTableWidgetItem("Erreur de comparaison enzymatique"))
                         self.stats_table.setItem(row, 1, QTableWidgetItem(validation['enzymo_comparison_error']))
+                        self.stats_table.setItem(row, 2, QTableWidgetItem(""))
 
         except Exception as e:
             logger.error(f"Erreur dans _display_statistics: {str(e)}", exc_info=True)
@@ -1272,6 +1463,13 @@ class Step3Acquisition(StepFrame):
                         for file in os.listdir(validation_comparison_dir):
                             if file.lower().endswith(('.png', '.jpg', '.jpeg')):
                                 graph_paths.append(os.path.join(validation_comparison_dir, file))
+
+                    # Ajouter les images du dossier comparaison_enzymo_routine si elles existent
+                    enzymo_comparison_dir = os.path.join(validation_dir, "comparaison_enzymo_routine")
+                    if os.path.exists(enzymo_comparison_dir):
+                        for file in os.listdir(enzymo_comparison_dir):
+                            if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                                graph_paths.append(os.path.join(enzymo_comparison_dir, file))
 
             if not graph_paths:
                 self.graphs_widget.setText("Aucune image disponible")

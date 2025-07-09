@@ -282,3 +282,27 @@ TEMPERATURE_FILES = [
     'IMin730',
     'IMax730'
 ]
+
+# Critères de validation pour la comparaison acquisition déploiement vs acquisition référence
+VALIDATION_CRITERIA = {
+    'r2': {
+        'min': 0.98,
+        'max': 1.0,
+        'description': "R² (coefficient de détermination)"
+    },
+    'intercept': {
+        'min': -5.0,
+        'max': 5.0,
+        'description': "Ordonnée à l'origine"
+    },
+    'slope': {
+        'min': 0.95,
+        'max': 1.05,
+        'description': "Pente"
+    },
+    'nb_puits_loin_fit': {
+        'min': 0,
+        'max': 10,
+        'description': "Nombre de puits dont biais relatif > 5%"
+    }
+}
