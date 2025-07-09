@@ -510,7 +510,7 @@ def repeta_sans_ref_v1_nanofilm(directory_source,nom_plaque,nom_reconstruction,d
 
     return  nb_iteration , nb_well_over_threshold , CV_max_thickness, CV_min_thickness, CV_mean_thickness, CV_max_I4, CV_min_I4, CV_mean_I4 ,CV_max_I7, CV_min_I7, CV_mean_I7, thickness_mean_for_this_plate , thickness_CV_for_this_plate , intensity_455_mean_for_this_plate , intensity_455_CV_for_this_plate , intensity_730_mean_for_this_plate , intensity_730_CV_for_this_plate
 
-
+# ajoute commentire
 def comparaison_ZC_to_ref_v1(nom_gp,chemin_intrument_1,type_intrument_1,chemin_intrument_2,type_intrument_2,directory_racine_to_save,name_dossier_to_save,tolerance_relative_fit):    
 # =============================================================================
 #     le but de cette fonction est de comparer les data en volumes d'un lecteur à un autre
