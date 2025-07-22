@@ -68,6 +68,25 @@ class ReportGenerator:
         logger.info(f"Générateur de rapports initialisé avec templates: {self.templates_dir}, "
                    f"sortie: {self.output_dir}")
 
+    def _get_installation_dir(self, installation_id: str) -> str:
+        """
+        Retourne le chemin du sous-dossier pour une installation spécifique
+
+        Args:
+            installation_id: Identifiant de l'installation
+
+        Returns:
+            Chemin complet du sous-dossier
+        """
+        if not installation_id:
+            return self.output_dir
+
+        # Création du sous-dossier pour l'installation
+        installation_dir = os.path.join(self.output_dir, installation_id)
+        os.makedirs(installation_dir, exist_ok=True)
+
+        return installation_dir
+
     def _create_wrapped_table(self, data, col_widths, header_color=colors.HexColor("#009967")):
         """
         Crée un tableau avec un wrapping de texte amélioré pour éviter les débordements
@@ -134,7 +153,11 @@ class ReportGenerator:
         # Préparation des données
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         pdf_filename = f"rapport_verification_{timestamp}.pdf"
-        pdf_path = os.path.join(self.output_dir, pdf_filename)
+
+        # Utilisation du sous-dossier de l'installation si disponible
+        installation_id = checks.get("installation_id", "")
+        output_dir = self._get_installation_dir(installation_id)
+        pdf_path = os.path.join(output_dir, pdf_filename)
 
         # Création du document PDF
         doc = SimpleDocTemplate(pdf_path, pagesize=letter)
@@ -350,189 +373,490 @@ class ReportGenerator:
         """
         logger.info("Génération du rapport d'acquisition (étape 3)")
 
-        # Préparation des données
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        pdf_filename = f"rapport_acquisition_{timestamp}.pdf"
-        pdf_path = os.path.join(self.output_dir, pdf_filename)
+        try:
+            # Préparation des données
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            pdf_filename = f"rapport_acquisition_{timestamp}.pdf"
 
-        # Création du document PDF
-        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
-        styles = getSampleStyleSheet()
-        elements = []
+            # Utilisation du sous-dossier de l'installation si disponible
+            installation_id = analysis.get("installation_id", "")
+            output_dir = self._get_installation_dir(installation_id)
+            pdf_path = os.path.join(output_dir, pdf_filename)
 
-        # Styles personnalisés
-        title_style = ParagraphStyle(
-            'Title',
-            parent=styles['Title'],
-            textColor=colors.HexColor("#009967"),
-            spaceAfter=12
-        )
-        heading_style = ParagraphStyle(
-            'Heading2',
-            parent=styles['Heading2'],
-            textColor=colors.HexColor("#009967"),
-            spaceAfter=6
-        )
-        normal_style = styles['Normal']
+            # Création du document PDF avec des marges réduites
+            doc = SimpleDocTemplate(
+                pdf_path, 
+                pagesize=letter,
+                leftMargin=0.5*inch,
+                rightMargin=0.5*inch,
+                topMargin=0.5*inch,
+                bottomMargin=0.5*inch
+            )
+            styles = getSampleStyleSheet()
+            elements = []
 
-        # Titre et date
-        elements.append(Paragraph("Rapport d'acquisition ZymoSoft", title_style))
-        elements.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", normal_style))
-        elements.append(Spacer(1, 0.25*inch))
+            # Styles personnalisés
+            title_style = ParagraphStyle(
+                'Title',
+                parent=styles['Title'],
+                textColor=colors.HexColor("#009967"),
+                spaceAfter=12,
+                fontSize=18
+            )
+            heading_style = ParagraphStyle(
+                'Heading2',
+                parent=styles['Heading2'],
+                textColor=colors.HexColor("#009967"),
+                spaceAfter=6
+            )
+            subheading_style = ParagraphStyle(
+                'Heading3',
+                parent=styles['Heading3'],
+                textColor=colors.HexColor("#009967"),
+                spaceAfter=4
+            )
+            normal_style = styles['Normal']
 
-        # Informations sur l'acquisition
-        elements.append(Paragraph("Informations sur l'acquisition", heading_style))
-
-        # Tableau des informations
-        data = [
-            ["Paramètre", "Valeur"],
-            ["Type de plaque", analysis.get("plate_type", "inconnu")],
-            ["Mode d'acquisition", analysis.get("acquisition_mode", "inconnu")],
-            ["Dossier de résultats", analysis.get("folder", "")],
-            ["Statut", "✓ Acquisition valide" if analysis.get("valid", False) else "✗ Acquisition non valide"]
-        ]
-
-        table = self._create_wrapped_table(data, [2.5*inch, 3.5*inch])
-        elements.append(table)
-        elements.append(Spacer(1, 0.15*inch))
-
-        # Statistiques
-        statistics = analysis.get("statistics", {})
-        if statistics:
-            elements.append(Paragraph("Statistiques", heading_style))
-
-            stats_data = [
-                ["Paramètre", "Valeur"],
-                ["Pente", str(round(statistics.get("slope", 0), 4))],
-                ["Ordonnée à l'origine", str(round(statistics.get("intercept", 0), 4))],
-                ["Coefficient de détermination (R²)", str(round(statistics.get("r2", 0), 4))],
-                ["Nombre de valeurs aberrantes", str(statistics.get("outliers_count", 0))],
-                ["Pourcentage de valeurs aberrantes", f"{round(statistics.get('outliers_percentage', 0), 2)}%"]
-            ]
-
-            stats_table = self._create_wrapped_table(stats_data, [3*inch, 3*inch])
-            elements.append(stats_table)
-            elements.append(Spacer(1, 0.15*inch))
-
-        # Résultats de validation (comparaison aux références)
-        validation = analysis.get("validation", {})
-        if validation and "comparison" in validation:
-            elements.append(Paragraph("Résultats de validation (comparaison aux références)", heading_style))
-
-            # Import des critères de validation
-            from zymosoft_assistant.utils.constants import VALIDATION_CRITERIA
-
-            comp = validation["comparison"]
-
-            # Préparation des données pour le tableau
-            validation_data = [
-                ["Paramètre", "Valeur", "Critère de référence", "Statut"]
-            ]
-
-            # Définition des paramètres à afficher
-            validation_params = [
-                ("Pente (validation)", comp.get("slope", 0), "slope"),
-                ("Ordonnée à l'origine (validation)", comp.get("intercept", 0), "intercept"),
-                ("R² (validation)", comp.get("r_value", 0), "r2"),
-                ("Points hors tolérance", comp.get("nb_puits_loin_fit", "N/A"), "nb_puits_loin_fit"),
-                ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%", None),
-                ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%", None)
-            ]
-
-            # Création des lignes du tableau avec vérification des critères
-            for param, value, criteria_key in validation_params:
-                status = ""
-                criteria_text = ""
-
-                if criteria_key and criteria_key in VALIDATION_CRITERIA:
-                    criteria = VALIDATION_CRITERIA[criteria_key]
-
-                    # Formatage du texte des critères
-                    if criteria_key == "r2":
-                        criteria_text = f"> {criteria['min']}"
-                    else:
-                        criteria_text = f"{criteria['min']} - {criteria['max']}"
-
-                    # Vérification si la valeur respecte les critères
-                    try:
-                        val = float(value) if isinstance(value, (int, float)) else 0
-                        is_valid = val >= criteria['min'] and val <= criteria['max']
-                        status = "✓" if is_valid else "✗"
-                    except (ValueError, TypeError):
-                        status = "?"
-
-                # Formatage de la valeur pour l'affichage
-                if isinstance(value, (int, float)):
-                    formatted_value = f"{value:.4f}" if criteria_key in ["slope", "intercept", "r2"] else str(value)
-                else:
-                    formatted_value = str(value)
-
-                validation_data.append([param, formatted_value, criteria_text, status])
-
-            # Création du tableau avec style
-            validation_table = Table(validation_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 0.5*inch])
-
-            # Style de base du tableau
-            table_style = TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            # En-tête moderne avec couleur de fond et logo
+            header_data = [["Rapport d'acquisition ZymoSoft"]]
+            header_table = Table(header_data, colWidths=[7*inch])
+            header_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#009967")),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('ALIGN', (1, 1), (3, -1), 'CENTER'),
-            ])
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+                ('TOPPADDING', (0, 0), (-1, -1), 15),
+            ]))
+            elements.append(header_table)
 
-            # Ajout de couleurs conditionnelles pour la colonne de statut
-            for i, row in enumerate(validation_data[1:], 1):
-                if row[3] == "✓":
-                    table_style.add('TEXTCOLOR', (3, i), (3, i), colors.green)
-                    table_style.add('FONTNAME', (3, i), (3, i), 'Helvetica-Bold')
-                elif row[3] == "✗":
-                    table_style.add('TEXTCOLOR', (3, i), (3, i), colors.red)
-                    table_style.add('FONTNAME', (3, i), (3, i), 'Helvetica-Bold')
+            # Titre et date
+            elements.append(Paragraph("Rapport d'acquisition ZymoSoft", title_style))
+            elements.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", normal_style))
+            elements.append(Spacer(1, 0.25*inch))
 
-            validation_table.setStyle(table_style)
-            elements.append(validation_table)
+            # Informations sur l'acquisition
+            elements.append(Paragraph("Informations sur l'acquisition", heading_style))
+
+            # Tableau des informations
+            data = [
+                ["Paramètre", "Valeur"],
+                ["Type de plaque", analysis.get("plate_type", "inconnu")],
+                ["Mode d'acquisition", analysis.get("acquisition_mode", "inconnu")],
+                ["Dossier de résultats", analysis.get("folder", "")],
+                ["Statut", "✓ Acquisition valide" if analysis.get("valid", False) else "✗ Acquisition non valide"]
+            ]
+
+            table = self._create_wrapped_table(data, [2.5*inch, 4.0*inch])
+            elements.append(table)
             elements.append(Spacer(1, 0.15*inch))
 
-        # Graphiques
-        graphs = analysis.get("graphs", [])
-        if graphs:
-            elements.append(Paragraph("Graphiques", heading_style))
-            for graph_path in graphs:
-                if os.path.exists(graph_path):
-                    img = Image(graph_path, width=6*inch, height=4*inch)
-                    elements.append(img)
-                    elements.append(Spacer(1, 0.1*inch))
+            # Statistiques
+            statistics = analysis.get("statistics", {})
+            if statistics:
+                elements.append(Paragraph("Statistiques", heading_style))
 
-        # Erreurs et avertissements
-        errors = analysis.get("errors", [])
-        if errors:
-            elements.append(Paragraph("Erreurs détectées", heading_style))
-            for error in errors:
-                elements.append(Paragraph(f"• <font color='red'>{error}</font>", normal_style))
-            elements.append(Spacer(1, 0.15*inch))
+                stats_data = [
+                    ["Paramètre", "Valeur"],
+                    ["Pente", str(round(statistics.get("slope", 0), 4))],
+                    ["Ordonnée à l'origine", str(round(statistics.get("intercept", 0), 4))],
+                    ["Coefficient de détermination (R²)", str(round(statistics.get("r2", 0), 4))],
+                    ["Nombre de valeurs aberrantes", str(statistics.get("outliers_count", 0))],
+                    ["Pourcentage de valeurs aberrantes", f"{round(statistics.get('outliers_percentage', 0), 2)}%"]
+                ]
 
-        warnings = analysis.get("warnings", [])
-        if warnings:
-            elements.append(Paragraph("Avertissements", heading_style))
-            for warning in warnings:
-                elements.append(Paragraph(f"• <font color='orange'>{warning}</font>", normal_style))
-            elements.append(Spacer(1, 0.15*inch))
+                stats_table = self._create_wrapped_table(stats_data, [3.5*inch, 3.0*inch])
+                elements.append(stats_table)
+                elements.append(Spacer(1, 0.15*inch))
 
-        # Pied de page
-        elements.append(Spacer(1, 0.5*inch))
-        elements.append(Paragraph("Rapport généré automatiquement par l'Assistant d'installation ZymoSoft", 
-                                 styles['Italic']))
+            # Résultats de validation (comparaison aux références)
+            validation = analysis.get("validation", {})
+            if validation and "comparison" in validation:
+                elements.append(Paragraph("Résultats de validation (comparaison aux références)", heading_style))
 
-        # Génération du PDF
-        doc.build(elements)
+                # Import des critères de validation
+                from zymosoft_assistant.utils.constants import VALIDATION_CRITERIA
 
-        logger.info(f"Rapport d'acquisition généré: {pdf_path}")
-        return pdf_path
+                comp = validation["comparison"]
+
+                # Préparation des données pour le tableau
+                validation_data = [
+                    ["Paramètre", "Valeur", "Critère de référence", "Statut"]
+                ]
+
+                # Définition des paramètres à afficher
+                validation_params = [
+                    ("Pente (validation)", comp.get("slope", 0), "slope"),
+                    ("Ordonnée à l'origine (validation)", comp.get("intercept", 0), "intercept"),
+                    ("R² (validation)", comp.get("r_value", 0), "r2"),
+                    ("Points hors tolérance", comp.get("nb_puits_loin_fit", "N/A"), "nb_puits_loin_fit"),
+                    ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%", None),
+                    ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%", None)
+                ]
+
+                # Création des lignes du tableau avec vérification des critères
+                for param, value, criteria_key in validation_params:
+                    status = ""
+                    criteria_text = ""
+
+                    if criteria_key and criteria_key in VALIDATION_CRITERIA:
+                        criteria = VALIDATION_CRITERIA[criteria_key]
+
+                        # Formatage du texte des critères
+                        if criteria_key == "r2":
+                            criteria_text = f"> {criteria['min']}"
+                        else:
+                            criteria_text = f"{criteria['min']} - {criteria['max']}"
+
+                        # Vérification si la valeur respecte les critères
+                        try:
+                            val = float(value) if isinstance(value, (int, float)) else 0
+                            is_valid = val >= criteria['min'] and val <= criteria['max']
+                            status = "✓" if is_valid else "✗"
+                        except (ValueError, TypeError):
+                            status = "?"
+
+                    # Formatage de la valeur pour l'affichage
+                    if isinstance(value, (int, float)):
+                        formatted_value = f"{value:.4f}" if criteria_key in ["slope", "intercept", "r2"] else str(value)
+                    else:
+                        formatted_value = str(value)
+
+                    validation_data.append([param, formatted_value, criteria_text, status])
+
+                # Création du tableau avec style
+                validation_table = Table(validation_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 0.5*inch])
+
+                # Style de base du tableau
+                table_style = TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('ALIGN', (1, 1), (3, -1), 'CENTER'),
+                ])
+
+                # Ajout de couleurs conditionnelles pour la colonne de statut
+                for i, row in enumerate(validation_data[1:], 1):
+                    if row[3] == "✓":
+                        table_style.add('TEXTCOLOR', (3, i), (3, i), colors.green)
+                        table_style.add('FONTNAME', (3, i), (3, i), 'Helvetica-Bold')
+                    elif row[3] == "✗":
+                        table_style.add('TEXTCOLOR', (3, i), (3, i), colors.red)
+                        table_style.add('FONTNAME', (3, i), (3, i), 'Helvetica-Bold')
+
+                validation_table.setStyle(table_style)
+                elements.append(validation_table)
+                elements.append(Spacer(1, 0.15*inch))
+
+            # Comparaison des résultats de puits (Well Results)
+            if validation and "well_results_comparison" in validation:
+                elements.append(Paragraph("Comparaison des résultats de puits", heading_style))
+
+                try:
+                    well_results_df = validation["well_results_comparison"]
+
+                    # Préparation des données pour le tableau
+                    well_results_data = [["Activité", "Area", "Acquisition", "Référence", "Différence", "Validité"]]
+
+                    # Limiter à 20 lignes maximum pour éviter un rapport trop long
+                    max_rows = min(20, len(well_results_df))
+
+                    for i in range(max_rows):
+                        row = well_results_df.iloc[i]
+                        well_results_data.append([
+                            f"{row.get('activité', 0):.2f}",
+                            f"{row.get('area', 0)}",
+                            f"{row.get('acquisition', 0):.2f}",
+                            f"{row.get('reference', 0):.2f}",
+                            f"{row.get('CV', 0):.2f}",
+                            "✓" if row.get('valid', False) else "✗"
+                        ])
+
+                    # Ajouter une ligne indiquant s'il y a plus de données
+                    if len(well_results_df) > max_rows:
+                        well_results_data.append([f"... {len(well_results_df) - max_rows} lignes supplémentaires non affichées", "", "", "", "", ""])
+
+                    # Création du tableau
+                    well_results_table = Table(well_results_data, colWidths=[0.9*inch, 0.6*inch, 1.1*inch, 1.1*inch, 1.1*inch, 0.9*inch])
+
+                    # Style du tableau
+                    well_table_style = TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+                    ])
+
+                    well_results_table.setStyle(well_table_style)
+                    elements.append(well_results_table)
+                    elements.append(Spacer(1, 0.15*inch))
+
+                    # Ajouter des statistiques globales
+                    if not well_results_df.empty:
+                        elements.append(Paragraph("Statistiques de comparaison des puits", subheading_style))
+
+                        # Calculer les statistiques globales
+                        diff_mean = well_results_df['CV'].mean() if 'CV' in well_results_df.columns else 0
+                        diff_std = well_results_df['CV'].std() if 'CV' in well_results_df.columns else 0
+
+                        # Calculer le taux de validation
+                        valid_count = well_results_df['valid'].sum() if 'valid' in well_results_df.columns else 0
+                        total_count = len(well_results_df)
+                        validation_rate = (valid_count / total_count * 100) if total_count > 0 else 0
+
+                        well_stats_data = [
+                            ["Statistique", "Valeur"],
+                            ["Différence moyenne", f"{diff_mean:.2f}"],
+                            ["Écart-type", f"{diff_std:.2f}"],
+                            ["Taux de validation", f"{validation_rate:.2f}% ({valid_count}/{total_count})"]
+                        ]
+
+                        well_stats_table = self._create_wrapped_table(well_stats_data, [2.5*inch, 4.5*inch])
+                        elements.append(well_stats_table)
+                        elements.append(Spacer(1, 0.15*inch))
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'ajout de la comparaison des résultats de puits: {str(e)}", exc_info=True)
+                    elements.append(Paragraph(f"Erreur lors de l'affichage des résultats de puits: {str(e)}", normal_style))
+                    elements.append(Spacer(1, 0.15*inch))
+
+            # Comparaison LOD/LOQ
+            if validation and "lod_loq_comparison" in validation:
+                elements.append(Paragraph("Comparaison des LOD/LOQ", heading_style))
+
+                try:
+                    lod_loq_df = validation["lod_loq_comparison"]
+
+                    # Préparation des données pour le tableau
+                    lod_loq_data = [["Area", "LOD Acq", "LOD Ref", "Diff LOD", "LOQ Acq", "LOQ Ref", "Diff LOQ", "Validité"]]
+
+                    # Ajouter les lignes pour chaque area
+                    if not lod_loq_df.empty:
+                        for i in range(len(lod_loq_df)):
+                            row = lod_loq_df.iloc[i]
+                            lod_loq_data.append([
+                                f"{row.get('Area', 0)}",
+                                f"{row.get('LOD_Acq', 0):.4f}",
+                                f"{row.get('LOD_Ref', 0):.4f}",
+                                f"{row.get('Diff_LOD', 0):.4f}",
+                                f"{row.get('LOQ_Acq', 0):.4f}",
+                                f"{row.get('LOQ_Ref', 0):.4f}",
+                                f"{row.get('Diff_LOQ', 0):.4f}",
+                                "✓" if row.get('Lod_Valid', False) and row.get('Loq_Valid', False) else "✗"
+                            ])
+
+                    # Création du tableau
+                    lod_loq_table = Table(lod_loq_data, colWidths=[0.7*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.8*inch, 0.6*inch])
+
+                    # Style du tableau
+                    lod_loq_style = TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+                    ])
+
+                    lod_loq_table.setStyle(lod_loq_style)
+                    elements.append(lod_loq_table)
+                    elements.append(Spacer(1, 0.15*inch))
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'ajout de la comparaison LOD/LOQ: {str(e)}", exc_info=True)
+                    elements.append(Paragraph(f"Erreur lors de l'affichage des LOD/LOQ: {str(e)}", normal_style))
+                    elements.append(Spacer(1, 0.15*inch))
+
+            # Graphiques en grille de 2
+            graphs = analysis.get("graphs", [])
+            if graphs:
+                elements.append(Paragraph("Graphiques", heading_style))
+
+                # Traiter les graphiques par paires
+                for i in range(0, len(graphs), 2):
+                    graph_row = []
+
+                    # Premier graphique de la paire
+                    if i < len(graphs) and os.path.exists(graphs[i]):
+                        graph_row.append(Image(graphs[i], width=3.5*inch, height=2.5*inch))
+                    else:
+                        graph_row.append("")
+
+                    # Deuxième graphique de la paire (s'il existe)
+                    if i+1 < len(graphs) and os.path.exists(graphs[i+1]):
+                        graph_row.append(Image(graphs[i+1], width=3.5*inch, height=2.5*inch))
+                    else:
+                        graph_row.append("")
+
+                    # Créer une table pour cette paire de graphiques
+                    if graph_row[0] or graph_row[1]:  # S'assurer qu'au moins un graphique existe
+                        graph_table = Table([graph_row], colWidths=[3.5*inch, 3.5*inch])
+                        graph_table.setStyle(TableStyle([
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ]))
+                        elements.append(graph_table)
+                        elements.append(Spacer(1, 0.15*inch))
+
+            # Analyse des logs
+            log_analysis = analysis.get("log_analysis", {})
+            if log_analysis:
+                elements.append(Paragraph("Analyse des logs d'acquisition", heading_style))
+
+                # Type d'acquisition et durée
+                acquisition_type = log_analysis.get("acquisition_type", "inconnu")
+                acquisition_duration = log_analysis.get("acquisition_duration", {})
+                duration_minutes = acquisition_duration.get("duration_minutes", 0)
+
+                log_data = [
+                    ["Paramètre", "Valeur"],
+                    ["Type d'acquisition", acquisition_type],
+                    ["Durée d'acquisition (minutes)", f"{duration_minutes:.2f}"],
+                    ["Nombre total de puits", str(log_analysis.get("total_wells", 0))],
+                    ["Nombre de drift fixes", str(log_analysis.get("drift_fix_count", 0))],
+                    ["Nombre de max retry", str(log_analysis.get("max_retry_count", 0))]
+                ]
+
+                # Ajouter les informations spécifiques au type d'acquisition
+                if acquisition_type == "prior":
+                    log_data.append(["Nombre moyen de loops", f"{log_analysis.get('average_value', 0):.2f}"])
+                    log_data.append(["Nombre total de mesures", str(log_analysis.get("total_measurements", 0))])
+                    log_data.append(["Mesures 'Done'", str(log_analysis.get("done_measurements", 0))])
+                    log_data.append(["Mesures 'Timeout'", str(log_analysis.get("timeout_measurements", 0))])
+                else:  # custom_focus
+                    log_data.append(["Nombre moyen de moves", f"{log_analysis.get('average_value', 0):.2f}"])
+                    log_data.append(["Nombre total de mesures", str(log_analysis.get("total_measurements", 0))])
+
+                log_table = self._create_wrapped_table(log_data, [3.5*inch, 3.5*inch])
+                elements.append(log_table)
+                elements.append(Spacer(1, 0.15*inch))
+
+            # Erreurs et avertissements
+            errors = analysis.get("errors", [])
+            if errors:
+                elements.append(Paragraph("Erreurs détectées", heading_style))
+                for error in errors:
+                    elements.append(Paragraph(f"• <font color='red'>{error}</font>", normal_style))
+                elements.append(Spacer(1, 0.15*inch))
+
+            warnings = analysis.get("warnings", [])
+            if warnings:
+                elements.append(Paragraph("Avertissements", heading_style))
+                for warning in warnings:
+                    elements.append(Paragraph(f"• <font color='orange'>{warning}</font>", normal_style))
+                elements.append(Spacer(1, 0.15*inch))
+
+            # Pied de page
+            elements.append(Spacer(1, 0.5*inch))
+            elements.append(Paragraph("Rapport généré automatiquement par l'Assistant d'installation ZymoSoft", 
+                                    styles['Italic']))
+
+            # Génération du PDF
+            doc.build(elements)
+
+            logger.info(f"Rapport d'acquisition généré: {pdf_path}")
+            return pdf_path
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération du rapport d'acquisition: {str(e)}", exc_info=True)
+            # Ajouter l'erreur à la liste des erreurs dans analysis
+            if "errors" not in analysis:
+                analysis["errors"] = []
+            analysis["errors"].append(f"Impossible de charger les données d'acquisition: {str(e)}")
+
+            # Essayer de générer un rapport minimal avec l'erreur
+            try:
+                # Création du document PDF avec des marges réduites
+                doc = SimpleDocTemplate(
+                    pdf_path, 
+                    pagesize=letter,
+                    leftMargin=0.5*inch,
+                    rightMargin=0.5*inch,
+                    topMargin=0.5*inch,
+                    bottomMargin=0.5*inch
+                )
+                styles = getSampleStyleSheet()
+                elements = []
+
+                # En-tête moderne avec couleur de fond
+                header_data = [["Rapport d'acquisition ZymoSoft"]]
+                header_table = Table(header_data, colWidths=[7*inch])
+                header_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#009967")),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+                    ('TOPPADDING', (0, 0), (-1, -1), 15),
+                ]))
+                elements.append(header_table)
+
+                # Titre et date
+                title_style = ParagraphStyle(
+                    'Title',
+                    parent=styles['Title'],
+                    textColor=colors.HexColor("#009967"),
+                    spaceAfter=12,
+                    fontSize=18
+                )
+                heading_style = ParagraphStyle(
+                    'Heading2',
+                    parent=styles['Heading2'],
+                    textColor=colors.HexColor("#009967"),
+                    spaceAfter=6
+                )
+                normal_style = styles['Normal']
+
+                elements.append(Paragraph("Rapport d'acquisition ZymoSoft", title_style))
+                elements.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", normal_style))
+                elements.append(Spacer(1, 0.25*inch))
+
+                # Informations sur l'acquisition
+                elements.append(Paragraph("Informations sur l'acquisition", heading_style))
+
+                # Tableau des informations
+                data = [
+                    ["Paramètre", "Valeur"],
+                    ["Type de plaque", analysis.get("plate_type", "inconnu")],
+                    ["Mode d'acquisition", analysis.get("acquisition_mode", "inconnu")],
+                    ["Dossier de résultats", analysis.get("folder", "")],
+                    ["Statut", "✗ Acquisition non valide"]
+                ]
+
+                table = self._create_wrapped_table(data, [2.5*inch, 4.0*inch])
+                elements.append(table)
+                elements.append(Spacer(1, 0.15*inch))
+
+                # Erreurs
+                elements.append(Paragraph("Erreurs détectées", heading_style))
+                for error in analysis.get("errors", []):
+                    elements.append(Paragraph(f"• <font color='red'>{error}</font>", normal_style))
+                elements.append(Spacer(1, 0.15*inch))
+
+                # Pied de page
+                elements.append(Spacer(1, 0.5*inch))
+                elements.append(Paragraph("Rapport généré automatiquement par l'Assistant d'installation ZymoSoft", 
+                                        styles['Italic']))
+
+                # Génération du PDF
+                doc.build(elements)
+
+                logger.info(f"Rapport d'acquisition minimal généré avec erreurs: {pdf_path}")
+                return pdf_path
+            except Exception as inner_e:
+                logger.error(f"Erreur lors de la génération du rapport minimal: {str(inner_e)}", exc_info=True)
+                return ""
 
     def generate_final_report(self, full_data: Dict[str, Any]) -> str:
         """
@@ -550,7 +874,11 @@ class ReportGenerator:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         client_name = full_data.get("client_info", {}).get("name", "client").replace(" ", "_")
         pdf_filename = f"rapport_installation_{client_name}_{timestamp}.pdf"
-        pdf_path = os.path.join(self.output_dir, pdf_filename)
+
+        # Utilisation du sous-dossier de l'installation si disponible
+        installation_id = full_data.get("installation_id", "")
+        output_dir = self._get_installation_dir(installation_id)
+        pdf_path = os.path.join(output_dir, pdf_filename)
 
         # Création du document PDF
         doc = SimpleDocTemplate(pdf_path, pagesize=letter)
@@ -610,6 +938,84 @@ class ReportGenerator:
             elements.append(Paragraph("Statut global: <font color='red'>✗ Installation non valide</font>", normal_style))
         elements.append(Spacer(1, 0.15*inch))
 
+        # Détails des vérifications de configuration
+        elements.append(Paragraph("Détails des vérifications de configuration", heading_style))
+
+        # Extraction et affichage des erreurs et avertissements
+        errors = []
+        warnings = []
+        for key, value in step2_checks.items():
+            if isinstance(value, dict) and "errors" in value:
+                errors.extend(value["errors"])
+            if isinstance(value, dict) and "warnings" in value:
+                warnings.extend(value["warnings"])
+
+        if errors:
+            elements.append(Paragraph("Erreurs détectées", subheading_style))
+            for error in errors:
+                elements.append(Paragraph(f"• <font color='red'>{error}</font>", normal_style))
+            elements.append(Spacer(1, 0.15*inch))
+
+        if warnings:
+            elements.append(Paragraph("Avertissements", subheading_style))
+            for warning in warnings:
+                elements.append(Paragraph(f"• <font color='orange'>{warning}</font>", normal_style))
+            elements.append(Spacer(1, 0.15*inch))
+
+        # Structure de l'installation
+        structure_results = step2_checks.get("structure", {})
+        if structure_results:
+            elements.append(Paragraph("Structure de l'installation", subheading_style))
+
+            # Tableau des vérifications de structure
+            data = [["Élément", "Statut"]]
+
+            # Ajout des éléments vérifiés au tableau
+            for key, value in structure_results.items():
+                if key != "installation_valid":
+                    item_text = key.replace("_exists", "").replace("_", " ").capitalize()
+                    status = "✓" if value else "✗"
+                    status_color = "green" if value else "red"
+                    data.append([item_text, f"<font color='{status_color}'>{status}</font>"])
+
+            # Création du tableau
+            if len(data) > 1:  # S'il y a des données en plus de l'en-tête
+                table = self._create_wrapped_table(data, [4*inch, 1*inch])
+                elements.append(table)
+                elements.append(Spacer(1, 0.15*inch))
+
+        # Config.ini
+        config_ini_results = step2_checks.get("config_ini", {})
+        if config_ini_results:
+            elements.append(Paragraph("Vérification de Config.ini", subheading_style))
+
+            # Statut
+            status_text = "✓ Valide" if config_ini_results.get("config_valid", False) else "✗ Non valide"
+            status_color = "green" if config_ini_results.get("config_valid", False) else "red"
+            elements.append(Paragraph(f"Statut: <font color='{status_color}'>{status_text}</font>", normal_style))
+            elements.append(Spacer(1, 0.1*inch))
+
+            # Valeurs
+            if "values" in config_ini_results and config_ini_results["values"]:
+                values_data = [["Section", "Clé", "Valeur", "Statut"]]
+
+                for section, keys in config_ini_results["values"].items():
+                    for key, info in keys.items():
+                        value = info.get("value", "")
+                        valid = info.get("valid", True)
+                        status = "✓" if valid else "✗"
+                        status_color = "green" if valid else "red"
+                        values_data.append([
+                            section, 
+                            key, 
+                            str(value), 
+                            f"<font color='{status_color}'>{status}</font>"
+                        ])
+
+                values_table = self._create_wrapped_table(values_data, [1.5*inch, 1.5*inch, 2*inch, 0.5*inch])
+                elements.append(values_table)
+                elements.append(Spacer(1, 0.15*inch))
+
         # Acquisitions réalisées
         elements.append(Paragraph("Acquisitions réalisées", heading_style))
 
@@ -632,13 +1038,86 @@ class ReportGenerator:
                 analysis = acquisition.get("analysis", {})
                 if analysis:
                     elements.append(Paragraph("Statistiques", subheading_style))
-                    stats_data = [
-                        ["Pente", str(round(analysis.get("slope", 0), 4))],
-                        ["R²", str(round(analysis.get("r2", 0), 4))]
-                    ]
 
-                    stats_table = self._create_wrapped_table(stats_data, [2*inch, 4*inch], header_color=colors.white)
+                    # Statistiques détaillées
+                    statistics = analysis.get("statistics", {})
+                    if statistics:
+                        stats_data = [
+                            ["Paramètre", "Valeur"],
+                            ["Pente", str(round(statistics.get("slope", 0), 4))],
+                            ["Ordonnée à l'origine", str(round(statistics.get("intercept", 0), 4))],
+                            ["Coefficient de détermination (R²)", str(round(statistics.get("r2", 0), 4))],
+                            ["Nombre de valeurs aberrantes", str(statistics.get("outliers_count", 0))],
+                            ["Pourcentage de valeurs aberrantes", f"{round(statistics.get('outliers_percentage', 0), 2)}%"]
+                        ]
+                    else:
+                        stats_data = [
+                            ["Paramètre", "Valeur"],
+                            ["Pente", str(round(analysis.get("slope", 0), 4))],
+                            ["R²", str(round(analysis.get("r2", 0), 4))]
+                        ]
+
+                    stats_table = self._create_wrapped_table(stats_data, [3*inch, 3*inch], header_color=colors.white)
                     elements.append(stats_table)
+
+                    # Résultats de validation (comparaison aux références)
+                    validation = analysis.get("validation", {})
+                    if validation and "comparison" in validation:
+                        elements.append(Paragraph("Résultats de validation", subheading_style))
+
+                        comp = validation["comparison"]
+
+                        # Préparation des données pour le tableau
+                        validation_data = [
+                            ["Paramètre", "Valeur", "Critère", "Statut"]
+                        ]
+
+                        # Définition des paramètres à afficher
+                        from zymosoft_assistant.utils.constants import VALIDATION_CRITERIA
+
+                        validation_params = [
+                            ("Pente (validation)", comp.get("slope", 0), "slope"),
+                            ("Ordonnée à l'origine", comp.get("intercept", 0), "intercept"),
+                            ("R² (validation)", comp.get("r_value", 0), "r2"),
+                            ("Points hors tolérance", comp.get("nb_puits_loin_fit", "N/A"), "nb_puits_loin_fit"),
+                            ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%", None),
+                            ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%", None)
+                        ]
+
+                        # Création des lignes du tableau avec vérification des critères
+                        for param, value, criteria_key in validation_params:
+                            status = ""
+                            criteria_text = ""
+
+                            if criteria_key and criteria_key in VALIDATION_CRITERIA:
+                                criteria = VALIDATION_CRITERIA[criteria_key]
+
+                                # Formatage du texte des critères
+                                if criteria_key == "r2":
+                                    criteria_text = f"> {criteria['min']}"
+                                else:
+                                    criteria_text = f"{criteria['min']} - {criteria['max']}"
+
+                                # Vérification si la valeur respecte les critères
+                                try:
+                                    val = float(value) if isinstance(value, (int, float)) else 0
+                                    is_valid = val >= criteria['min'] and val <= criteria['max']
+                                    status = "✓" if is_valid else "✗"
+                                except (ValueError, TypeError):
+                                    status = "?"
+
+                            # Formatage de la valeur pour l'affichage
+                            if isinstance(value, (int, float)):
+                                formatted_value = f"{value:.4f}" if criteria_key in ["slope", "intercept", "r2"] else str(value)
+                            else:
+                                formatted_value = str(value)
+
+                            validation_data.append([param, formatted_value, criteria_text, status])
+
+                        # Création du tableau avec style
+                        validation_table = self._create_wrapped_table(validation_data, [2*inch, 1.5*inch, 1.5*inch, 1*inch])
+                        elements.append(validation_table)
+                        elements.append(Spacer(1, 0.15*inch))
 
                 # Commentaires de l'acquisition
                 comments = acquisition.get("comments", "")

@@ -117,8 +117,15 @@ def save_session_data(data: Dict[str, Any], filename: str = None) -> str:
 
     file_path = os.path.join(TEMP_DIR, filename)
 
+    # Classe d'encodeur personnalisée pour gérer les objets datetime
+    class DateTimeEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, datetime.datetime):
+                return obj.isoformat()
+            return super().default(obj)
+
     with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(data, f, ensure_ascii=False, indent=2, cls=DateTimeEncoder)
 
     logger.info(f"Données de session sauvegardées dans {file_path}")
     return file_path

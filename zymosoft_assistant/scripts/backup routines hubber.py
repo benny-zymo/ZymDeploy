@@ -3,10 +3,6 @@
 Created on Wed Mar  9 14:05:24 2022
 
 @author: helene
-@author: Hubert Goddefroy
-@author: Benny Tenezeu
-
-Pour reinclures les images dans les sortie de validation, il faut décommenter les lignes de copyfile, plt.savefig, mergetwofigure
 """
 from shutil import copyfile
 
@@ -127,11 +123,10 @@ def repeta_sans_ref_v1(directory_source,nom_plaque,nom_reconstruction,directory_
         file = dossier_reconstruction + '\\synthese_interferometric_data.csv'
 #        lecture de synthese_interferometric_data.csv issu de Zyminterne
         volume_now, volume_std_now, diametre_now, diametre_std_now, N_dot_detected_now, N_dot_keep_now, N_cycle_now, porcent_dot_keep_now =  import_data_from_csv_synthese_zymintern(file)
-#
-        #        copie des dotmaps pour un suivi  de l'allure des dots
-        # copyfile(dossier_reconstruction+'\\dot_map_730.png',directory_out_this_plate+'\\dot_map_730_'+liste_dossier_plaque[j_iteration]+'.png')
-        # copyfile(dossier_reconstruction+'\\dot_map_contour_730.png',directory_out_this_plate+'\\dot_map_contour_730'+liste_dossier_plaque[j_iteration]+'.png')
-        # copyfile(dossier_reconstruction+'\\dot_map_cycle_730.png',directory_out_this_plate+'\\dot_map_cycle_730'+liste_dossier_plaque[j_iteration]+'.png')
+#        copie des dotmaps pour un suivi  de l'allure des dots
+        copyfile(dossier_reconstruction+'\\dot_map_730.png',directory_out_this_plate+'\\dot_map_730_'+liste_dossier_plaque[j_iteration]+'.png')
+        copyfile(dossier_reconstruction+'\\dot_map_contour_730.png',directory_out_this_plate+'\\dot_map_contour_730'+liste_dossier_plaque[j_iteration]+'.png')
+        copyfile(dossier_reconstruction+'\\dot_map_cycle_730.png',directory_out_this_plate+'\\dot_map_cycle_730'+liste_dossier_plaque[j_iteration]+'.png')
 
         volume_plaque_all_iteration[:,:,j_iteration] = np.copy(volume_now[:,:])
         volume_std_plaque_all_iteration[:,:,j_iteration] = np.copy(volume_std_now[:,:])
@@ -212,25 +207,25 @@ def repeta_sans_ref_v1(directory_source,nom_plaque,nom_reconstruction,directory_
     csv_out_this_plate.close()
 
     affiche_colormap_etude_general_v2(volume_mean_for_this_plate,nom_plaque+'volume_mean_for_this_plate on all iteration','jet',0,500)
-    #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_mean_for_this_plate.jpg')
+    plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_mean_for_this_plate.jpg')
 
     affiche_colormap_etude_general_v2(volume_std_for_this_plate,nom_plaque+'volume_std_for_this_plate on all iteration','jet',0,0)
-    #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_std_for_this_plate.jpg')
+    plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_std_for_this_plate.jpg')
 
     affiche_colormap_etude_general_v2(volume_CV_for_this_plate,nom_plaque+'volume_CV_for_this_plate on all iteration','Reds',0,10)
-    #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_CV_for_this_plate.jpg')
+    plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_CV_for_this_plate.jpg')
 
     affiche_colormap_etude_general_v2(volume_std_mean_for_this_plate,nom_plaque+'volume_std_mean_for_this_plate on all iteration','jet',0,0)
-    #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_std_mean_for_this_plate.jpg')
+    plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_std_mean_for_this_plate.jpg')
 
     affiche_colormap_etude_general_v2(nb_dot_detecte_mean_for_this_plate,nom_plaque+'nb_dot_detecte_mean_for_this_plate on all iteration','jet',0,0)
-    #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'nb_dot_detecte_mean_for_this_plate.jpg')
+    plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'nb_dot_detecte_mean_for_this_plate.jpg')
 
     affiche_colormap_etude_general_v2(nb_dot_detecte_std_for_this_plate,nom_plaque+'nb_dot_detecte_std_for_this_plate on all iteration','jet',0,0)
-    #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'nb_dot_detecte_std_for_this_plate.jpg')
+    plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'nb_dot_detecte_std_for_this_plate.jpg')
 
     affiche_colormap_etude_general_v2(porcent_dot_utile_mean_for_this_plate,nom_plaque+'porcent_dot_utile_mean_for_this_plate on all iteration','jet',0,0)
-    #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'porcent_dot_utile_mean_for_this_plate.jpg')
+    plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'porcent_dot_utile_mean_for_this_plate.jpg')
 
 
     mask_under_threshold = volume_CV_for_this_plate < CV_repeta_threshold
@@ -368,11 +363,11 @@ def repeta_sans_ref_v1_nanofilm(directory_source,nom_plaque,nom_reconstruction,d
 #        lecture de synthese_interferometric_data.csv issu de Zyminterne
         thickness_now, thickness_std_now, intensite_455_now, intensite_730_now, N_area_before_now, N_area_after_now, porcent_area_now =  import_data_from_csv_synthese_zymintern_nanofilm(file)
 #        copie des dotmaps pour un suivi  de l'allure des dots
-        # copyfile(dossier_reconstruction+'\\intensity_455_map.png',directory_out_this_plate+'\\intensity_455_'+liste_dossier_plaque[j_iteration]+'.png')
-        # copyfile(dossier_reconstruction+'\\intensity_730_map.png',directory_out_this_plate+'\\intensity_730_'+liste_dossier_plaque[j_iteration]+'.png')
-        # copyfile(dossier_reconstruction+'\\stat_litteral_intensity_455_colormap.png',directory_out_this_plate+'\\intensity_455_colormap'+liste_dossier_plaque[j_iteration]+'.png')
-        # copyfile(dossier_reconstruction+'\\stat_litteral_intensity_730_colormap.png',directory_out_this_plate+'\\intensity_730_colormap'+liste_dossier_plaque[j_iteration]+'.png')
-        # copyfile(dossier_reconstruction+'\\stat_litteral_thicknesses_colormap.png',directory_out_this_plate+'\\thicknesses'+liste_dossier_plaque[j_iteration]+'.png')
+        copyfile(dossier_reconstruction+'\\intensity_455_map.png',directory_out_this_plate+'\\intensity_455_'+liste_dossier_plaque[j_iteration]+'.png')
+        copyfile(dossier_reconstruction+'\\intensity_730_map.png',directory_out_this_plate+'\\intensity_730_'+liste_dossier_plaque[j_iteration]+'.png')
+        copyfile(dossier_reconstruction+'\\stat_litteral_intensity_455_colormap.png',directory_out_this_plate+'\\intensity_455_colormap'+liste_dossier_plaque[j_iteration]+'.png')
+        copyfile(dossier_reconstruction+'\\stat_litteral_intensity_730_colormap.png',directory_out_this_plate+'\\intensity_730_colormap'+liste_dossier_plaque[j_iteration]+'.png')
+        copyfile(dossier_reconstruction+'\\stat_litteral_thicknesses_colormap.png',directory_out_this_plate+'\\thicknesses'+liste_dossier_plaque[j_iteration]+'.png')
 
         thickness_plaque_all_iteration[:,:,j_iteration] = np.copy(thickness_now[:,:])
         thickness_std_plaque_all_iteration[:,:,j_iteration] = np.copy(thickness_std_now[:,:])
@@ -636,19 +631,19 @@ def comparaison_ZC_to_ref_v1(nom_gp,chemin_intrument_1,type_intrument_1,chemin_i
 
 # présentation des différences calculées selon des colormaps    
     affiche_colormap_etude_general(Matrix_volume_difference,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_difference','RdGy',np.nanmin(Matrix_volume_difference),np.nanmax(Matrix_volume_difference))
-    #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_difference.jpg')
+    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_difference.jpg')
 
     affiche_colormap_etude_general(Matrix_volume_difference_relative,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_difference en %','PuOr',-100,100)
-    #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_difference_relative.jpg')
+    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_difference_relative.jpg')
 
     affiche_colormap_etude_general(Matrix_volume_ratio,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_ratio','Greens',np.nanmin(Matrix_volume_ratio),np.nanmax(Matrix_volume_ratio))
-    #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_ratio.jpg')
+    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_ratio.jpg')
 
     affiche_colormap_etude_general(Matrix_diametre_difference,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\n Matrix_diametre_difference','autumn',np.nanmin(Matrix_diametre_difference),np.nanmax(Matrix_diametre_difference))
-    #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_diametre_difference.jpg')
+    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_diametre_difference.jpg')
 
     affiche_colormap_etude_general(Matrix_diametre_difference_relative,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\n Matrix_diametre_difference_relative','cool',np.nanmin(Matrix_diametre_difference_relative),np.nanmax(Matrix_diametre_difference_relative))
-    #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_diametre_difference_relative.jpg')
+    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_diametre_difference_relative.jpg')
 
 # mise sous forme de vecteur des volumes et diamètres pour fiter     
 
@@ -737,7 +732,7 @@ def comparaison_ZC_to_ref_v1(nom_gp,chemin_intrument_1,type_intrument_1,chemin_i
         plt.xlabel('V issu stat µm^3  '+type_intrument_2)
         plt.ylabel('V issu stat µm^3  '+type_intrument_1)
         plt.legend()    
-        plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+' volumes par puits_FIT.jpg')
+        plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'volumes par puits_FIT.jpg')
 # calcul de l'écart data - fit et mask en fct du seuillage de l'écart tolérable
     j_pos = 0
     while j_pos<96:
@@ -764,7 +759,7 @@ def comparaison_ZC_to_ref_v1(nom_gp,chemin_intrument_1,type_intrument_1,chemin_i
     plt.xlabel('V issu stat µm^3  '+type_intrument_2)
     plt.ylabel('V issu stat µm^3  '+type_intrument_1)
     plt.legend()
-    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+' volumes par puits_fit.jpg')
+    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'volumes par puits_fit.jpg')
 
 #    assemblage des figures de dotmaps et colormaps
     # merge_two_figure([directory_source_synthese_instrument_1,directory_source_synthese_instrument_2],name_dossier_instrument_1,['dot_map_730.png','dot_map_730.png'],directory_plaque_to_save)
@@ -784,8 +779,8 @@ def comparaison_ZC_to_ref_v1(nom_gp,chemin_intrument_1,type_intrument_1,chemin_i
     affiche_colormap_etude_general(diametre_instrument_2,'diametres_'+type_intrument_2,'jet',15,50)
     # plt.savefig(directory_plaque_to_save+'\\diametres_'+type_intrument_2+'.jpg')
 
-    # merge_two_figure([directory_plaque_to_save,directory_plaque_to_save],name_dossier_instrument_1,['diametres_'+type_intrument_1+'.jpg','diametres_'+type_intrument_2+'.jpg'],directory_plaque_to_save)
-    # merge_two_figure([directory_plaque_to_save,directory_plaque_to_save],name_dossier_instrument_1,['volumes_'+type_intrument_1+'.jpg','volumes_'+type_intrument_2+'.jpg'],directory_plaque_to_save)
+    merge_two_figure([directory_plaque_to_save,directory_plaque_to_save],name_dossier_instrument_1,['diametres_'+type_intrument_1+'.jpg','diametres_'+type_intrument_2+'.jpg'],directory_plaque_to_save)
+    merge_two_figure([directory_plaque_to_save,directory_plaque_to_save],name_dossier_instrument_1,['volumes_'+type_intrument_1+'.jpg','volumes_'+type_intrument_2+'.jpg'],directory_plaque_to_save)
 
 #    copier coller des dotmaps
     # copyfile(directory_source_synthese_instrument_1+'\\dot_map_730.png',directory_plaque_to_save+'\\dot_map_730_'+type_intrument_1+'.png')
@@ -962,19 +957,16 @@ def comparaison_ZC_to_ref_v1_nanofilm(nom_gp,chemin_intrument_1,type_intrument_1
 #    nb de puits utiles pour le fit
     nb_puits_trop_loins = np.sum(mask_thickness_eloignes) - np.sum(mask_nan)
 
-    # le type instrument est le nom du dossier de la plaque ( c'est à dire le dernier dossier du chemin)
-    name_dossier_instrument_1 = os.path.basename(os.path.normpath(chemin_intrument_1))
-
     plt.close(10)
     plt.figure(10,figsize=(12,6))
-    plt.suptitle(type_intrument_1+' épaisseur par puits '+type_intrument_2+' vs '+type_intrument_1 +'\n ')#\n'
+    plt.suptitle(name_dossier_instrument_1+' épaisseur par puits '+type_intrument_2+' vs '+type_intrument_1 +'\n ')#\n'
     plt.plot(vecteur_thickness_instrument_2[mask_thickness_proches],vecteur_thickness_instrument_1[mask_thickness_proches],'o',color='blue',label='data utile au fit')
     plt.plot(vecteur_thickness_instrument_2[mask_thickness_eloignes],vecteur_thickness_instrument_1[mask_thickness_eloignes],'rx',label='outlier')
     plt.plot(np.arange(np.nanmin(vecteur_thickness_instrument_2),np.nanmax(vecteur_thickness_instrument_2)),np.arange(np.nanmin(vecteur_thickness_instrument_2),np.nanmax(vecteur_thickness_instrument_2)),label='bissectrice = target',color='k')
     plt.xlabel('T issu stat nm  '+type_intrument_2)
     plt.ylabel('T issu stat nm  '+type_intrument_1)
     plt.legend()
-    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+' epaisseur par puits.jpg')
+    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'epaisseur par puits.jpg')
 
     mask_thickness_eloignes_fit = vecteur_thickness_instrument_2 >0 
 #calcul du fit sur les volumes 
@@ -995,7 +987,7 @@ def comparaison_ZC_to_ref_v1_nanofilm(nom_gp,chemin_intrument_1,type_intrument_1
         plt.xlabel('T issu stat µm^3  '+type_intrument_2)
         plt.ylabel('T issu stat µm^3  '+type_intrument_1)
         plt.legend()    
-        plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+' epaisseur par puits_FIT.jpg')
+        plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'epaisseur par puits_FIT.jpg')
     else:
         slope_fit_inverse, intercept_fit_inverse, r_value_fit_inverse, p_value_fit_inverse, std_err_fit_inverse = stats.linregress(vecteur_thickness_instrument_2,vecteur_thickness_instrument_1)
         data_fit = slope_fit_inverse*vecteur_thickness_instrument_2+intercept_fit_inverse
@@ -1009,7 +1001,7 @@ def comparaison_ZC_to_ref_v1_nanofilm(nom_gp,chemin_intrument_1,type_intrument_1
         plt.xlabel('T issu stat µm^3  '+type_intrument_2)
         plt.ylabel('T issu stat µm^3  '+type_intrument_1)
         plt.legend()    
-        plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+' epaisseur par puits_FIT.jpg')
+        plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'epaisseur par puits_FIT.jpg')
 # calcul de l'écart data - fit et mask en fct du seuillage de l'écart tolérable
     j_pos = 0
     while j_pos<96:
@@ -1036,7 +1028,7 @@ def comparaison_ZC_to_ref_v1_nanofilm(nom_gp,chemin_intrument_1,type_intrument_1
     plt.xlabel('T issu stat µm^3  '+type_intrument_2)
     plt.ylabel('T issu stat µm^3  '+type_intrument_1)
     plt.legend()
-    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+' epaisseur par puits_fit.jpg')
+    plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'epaisseur par puits_fit.jpg')
 
 #    assemblage des figures de dotmaps et colormaps
     # merge_two_figure([directory_source_synthese_instrument_1,directory_source_synthese_instrument_2],name_dossier_instrument_1,['stat_litteral_thicknesses_colormap.png','stat_litteral_thicknesses_colormap.png'],directory_plaque_to_save)
@@ -1045,22 +1037,22 @@ def comparaison_ZC_to_ref_v1_nanofilm(nom_gp,chemin_intrument_1,type_intrument_1
 
 #    regénération des colormaps volumes et diamètres
     affiche_colormap_etude_general(thickness_instrument_1,'épaisseur_'+type_intrument_1,'jet',0,200)
-    # plt.savefig(directory_plaque_to_save+'\\epaisseur_'+type_intrument_1+'.jpg')
+    plt.savefig(directory_plaque_to_save+'\\epaisseur_'+type_intrument_1+'.jpg')
 
     affiche_colormap_etude_general(thickness_instrument_2,'épaisseur_'+type_intrument_2,'jet',0,200)
-    # plt.savefig(directory_plaque_to_save+'\\epaisseur_'+type_intrument_2+'.jpg')
+    plt.savefig(directory_plaque_to_save+'\\epaisseur_'+type_intrument_2+'.jpg')
 
-    # merge_two_figure([directory_plaque_to_save,directory_plaque_to_save],name_dossier_instrument_1,['epaisseur_'+type_intrument_1+'.jpg','epaisseur_'+type_intrument_2+'.jpg'],directory_plaque_to_save)
+    merge_two_figure([directory_plaque_to_save,directory_plaque_to_save],name_dossier_instrument_1,['epaisseur_'+type_intrument_1+'.jpg','epaisseur_'+type_intrument_2+'.jpg'],directory_plaque_to_save)
 
 #    copier coller des dotmaps
-    # copyfile(directory_source_synthese_instrument_1+'\\stat_litteral_thicknesses_colormap.png',directory_plaque_to_save+'\\thicknesses_'+type_intrument_1+'.png')
-    # copyfile(directory_source_synthese_instrument_2+'\\stat_litteral_thicknesses_colormap.png',directory_plaque_to_save+'\\thicknesses_'+type_intrument_2+'.png')
+    copyfile(directory_source_synthese_instrument_1+'\\stat_litteral_thicknesses_colormap.png',directory_plaque_to_save+'\\thicknesses_'+type_intrument_1+'.png')
+    copyfile(directory_source_synthese_instrument_2+'\\stat_litteral_thicknesses_colormap.png',directory_plaque_to_save+'\\thicknesses_'+type_intrument_2+'.png')
 
-    # copyfile(directory_source_synthese_instrument_1+'\\stat_litteral_intensity_455_colormap.png',directory_plaque_to_save+'\\intensity_455'+type_intrument_1+'.png')
-    # copyfile(directory_source_synthese_instrument_2+'\\stat_litteral_intensity_455_colormap.png',directory_plaque_to_save+'\\intensity_455'+type_intrument_2+'.png')
+    copyfile(directory_source_synthese_instrument_1+'\\stat_litteral_intensity_455_colormap.png',directory_plaque_to_save+'\\intensity_455'+type_intrument_1+'.png')
+    copyfile(directory_source_synthese_instrument_2+'\\stat_litteral_intensity_455_colormap.png',directory_plaque_to_save+'\\intensity_455'+type_intrument_2+'.png')
 
-    # copyfile(directory_source_synthese_instrument_1+'\\stat_litteral_intensity_730_colormap.png',directory_plaque_to_save+'\\intensity_730'+type_intrument_1+'.png')
-    # copyfile(directory_source_synthese_instrument_2+'\\stat_litteral_intensity_730_colormap.png',directory_plaque_to_save+'\\intensity_730'+type_intrument_2+'.png')
+    copyfile(directory_source_synthese_instrument_1+'\\stat_litteral_intensity_730_colormap.png',directory_plaque_to_save+'\\intensity_730'+type_intrument_1+'.png')
+    copyfile(directory_source_synthese_instrument_2+'\\stat_litteral_intensity_730_colormap.png',directory_plaque_to_save+'\\intensity_730'+type_intrument_2+'.png')
 #   calcul de moyenneset ecarts types des différences en volumes et diametres
     Matrix_thickness_difference_relative_mean = np.nanmean(Matrix_thickness_difference_relative)
     Matrix_thickness_difference_relative_std = np.nanstd(Matrix_thickness_difference_relative)    
@@ -1154,7 +1146,16 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
     # print('\n\nonglet : \n\n',onglet)
 
 
-
+    # afficher les paramtère de la fonction
+    print("Paramètres de la fonction comparaison enzymo :")
+    print("directory_source_instrument_1 :", directory_source_instrument_1)
+    print("type_instrument_1 :", type_instrument_1)
+    print("acquisition_name_instrument_1 :", acquisition_name_instrument_1)
+    print("directory_source_instrument_2 :", directory_source_instrument_2)
+    print("type_instrument_2 :", type_instrument_2)
+    print("acquisition_name_instrument_2 :", acquisition_name_instrument_2)
+    print("directory_to_save :", directory_to_save)
+    print("============================================================================")
     # =============================================================================
 
     #######################################################################
@@ -1176,17 +1177,22 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
 
     df = pandas.read_excel(chemin_well_result_reference,sheet_name=onglet)
     results_Reference = df.values.tolist()
+    print('results_Reference : \n',results_Reference)
 
+    print('len(results_Reference) : ',len(results_Reference))
     if results_Reference[-1] == [] or results_Reference[-1] == [';;;;;;;;;'] or results_Reference[-1] == [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]:
+        print('Dernière ligne vide ou non renseignée, suppression de la dernière ligne.')
         print(results_Reference[-1])
         results_Reference.pop()
 
+    print(f'première ligne de results_Reference : {results_Reference[0]}')
     if results_Reference[0][0] == 'Plate Reference': # le premier onglet à un paragraphe de plus que les suivants (qui comporte les info date, heure, référence plaque, ce qui correspond à l'en-tête)
         start_stop = []
         j_1 = 0
         while len(start_stop) < 7 and j_1 < len(results_Reference):
             # On cherche les lignes vides ou les lignes qui contiennent uniquement des séparateurs
             if results_Reference[j_1] == []  or results_Reference[j_1] == [';;;;;;;;;'] or results_Reference[j_1] == [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]:
+                print(f'Ajout de l\'index {j_1} à start_stop')
                 start_stop.append(j_1)
             j_1 += 1
 
@@ -1215,14 +1221,19 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
         #     SampleDetail_Reference.append(results_Reference[k+start_stop[3]+3])
 
         for k in range(start_stop[1]-3):
+            print(f' entete refernece results_Reference[{k+3}] : {results_Reference[k+3]}')
             Entete_Reference.append(results_Reference[k+3])
         for k in range(start_stop[2] - start_stop[1] - 3):
+            print(f' blanc reference results_Reference[{k+start_stop[1]+3}] : {results_Reference[k+start_stop[1]+3]}')
             Blank_Reference.append(results_Reference[k+start_stop[1]+3])
         for k in range(start_stop[4] - start_stop[3] - 3):
+            print(f' gamme reference results_Reference[{k+start_stop[3]+3}] : {results_Reference[k+start_stop[3]+3]}')
             Gamme_Reference.append(results_Reference[k+start_stop[3]+3])
         for k in range(start_stop[5] - start_stop[4] - 3):
+            print(f' sample reference results_Reference[{k+start_stop[4]+3}] : {results_Reference[k+start_stop[4]+3]}')
             Sample_Reference.append(results_Reference[k+start_stop[4]+3])
         for k in range(len(results_Reference) - start_stop[6] - 3):
+            print(f' sample detail reference results_Reference[{k+start_stop[6]+3}] : {results_Reference[k+start_stop[6]+3]}')
             SampleDetail_Reference.append(results_Reference[k+start_stop[6]+3])
     else:
         start_stop = []
@@ -1231,6 +1242,7 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
 
             # On cherche les lignes vides ou les lignes qui contiennent uniquement des séparateurs
             if results_Reference[j_1] == []  or results_Reference[j_1] == [';;;;;;;;;'] or results_Reference[j_1] == [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]:
+                print(f'Ajout de l\'index {j_1} à start_stop séparateur')
                 start_stop.append(j_1)
             j_1 += 1
 
@@ -1259,14 +1271,19 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
         #     SampleDetail_Reference.append(results_Reference[k+start_stop[3]+3])
 
         for k in range(start_stop[0]):
+            print(f' entete refernece results_Reference[{k+3}] : {results_Reference[k+3]}')
             Entete_Reference.append(results_Reference[k])
         for k in range(start_stop[1] - start_stop[0] - 3):
+            print(f' blanc reference results_Reference[{k+start_stop[0]+3}] : {results_Reference[k+start_stop[0]+3]}')
             Blank_Reference.append(results_Reference[k+start_stop[0]+3])
         for k in range(start_stop[3] - start_stop[2] - 3):
+            print(f' gamme reference results_Reference[{k+start_stop[2]+3}] : {results_Reference[k+start_stop[2]+3]}')
             Gamme_Reference.append(results_Reference[k+start_stop[2]+3])
         for k in range(start_stop[4] - start_stop[3] - 3):
+            print(f' sample reference results_Reference[{k+start_stop[3]+3}] : {results_Reference[k+start_stop[3]+3]}')
             Sample_Reference.append(results_Reference[k+start_stop[3]+3])
         for k in range(len(results_Reference) - start_stop[5] - 3):
+            print(f' sample detail reference results_Reference[{k+start_stop[5]+3}] : {results_Reference[k+start_stop[5]+3]}')
             SampleDetail_Reference.append(results_Reference[k+start_stop[5]+3])
 
     ## Ces listes sont des tableaux 1D, chaque ligne n'est pas encore séparée
@@ -2058,3 +2075,778 @@ def compare_enzymo_2_ref(directory_source_instrument_1,type_instrument_1,acquisi
     data_V = data_V + nexto
 
     return data_R, data_V
+
+# =============================================================================
+# debut code d'utilisation des fct
+# =============================================================================
+
+alphabet_majuscule = string.ascii_uppercase
+
+''' MACHINE A VALIDER '''
+# Chemin d'accès au dossier avec toutes les acquisitions nomées comme suit :
+# nom_de_plaque (qui sort du cube) + "_numéro_de_la_série"
+# exemple "Ax_ZC_20x_GPExploAx220112-07_17022022_3"
+# Utiliser un chemin par défaut qui peut être remplacé par les paramètres passés aux fonctions
+default_valid_dir = os.environ.get('ZYMOPTIQ_VALID_DIR', os.path.join(os.path.expanduser('~'), 'Documents', 'VALID_ZC27'))
+directory_source_valid = default_valid_dir
+nom_machine_a_valider = 'ZC27'
+
+''' MACHINE REFERENCE '''
+default_ref_dir = os.environ.get('ZYMOPTIQ_REF_DIR', os.path.join(os.path.expanduser('~'), 'Documents', 'reference_ZC13_routine_validation'))
+directory_source_reference = default_ref_dir
+nom_machine_reference = 'REFERENCE ZYMOPTIQ ZC13'
+
+# Longueur d'onde utilisée
+lo = 730
+
+# Vérifier si les répertoires existent
+if not os.path.exists(directory_source_valid):
+    print(f"Le répertoire de validation {directory_source_valid} n'existe pas. Création du répertoire.")
+    os.makedirs(directory_source_valid, exist_ok=True)
+
+if not os.path.exists(directory_source_reference):
+    print(f"Le répertoire de référence {directory_source_reference} n'existe pas. Création du répertoire.")
+    os.makedirs(directory_source_reference, exist_ok=True)
+
+# Initialiser la liste des dossiers présents si le répertoire existe
+liste_dossier_present = []
+if os.path.exists(directory_source_valid):
+    try:
+        liste_dossier_present = os.listdir(directory_source_valid)
+    except Exception as e:
+        print(f"Erreur lors de la lecture du répertoire {directory_source_valid}: {str(e)}")
+        liste_dossier_present = []
+
+# chaque plaque va etre traitée indépendament des autres
+# prend les plaques avec cette clef ds le nom de dossier
+plate_type = 'GP'  # pour la plate type GP ( les plaques micro depot )
+plat_type_nanofilm = 'SC'  # pour la plate type SC ( les plaques nanofilm )
+#    va contenir tous les nom de dossier où on trouve les caractères correspondants au plate_type
+liste_plaque = []
+liste_plaque_nanofilm = []
+
+# Cherche les plaques correspondantes dans la liste des dossiers présents
+for folder in liste_dossier_present:
+    if plate_type in folder and folder not in liste_plaque:
+        liste_plaque.append(folder)
+    if plat_type_nanofilm in folder and folder not in liste_plaque_nanofilm:
+        liste_plaque_nanofilm.append(folder)
+   #
+#   nb total de dossier à traiter (peu importe la ref)
+nb_plaque_to_consider_all = len(liste_plaque)
+nb_plaque_to_consider_all_nanofilm = len(liste_plaque_nanofilm)
+
+#liste_ref_plaque = [] # contient les références des plaques sans le numero de repeta
+#j_plaque = 0
+#while j_plaque < nb_plaque_to_consider_all:
+#    if liste_plaque[j_plaque][:-3] not in liste_ref_plaque:
+#        liste_ref_plaque.append(liste_plaque[j_plaque][:-3])
+#    j_plaque += 1 
+#    
+#    
+
+liste_ref_plaque = [] # contient les références des plaques sans le numero de repeta
+liste_ref_plaque_nanofilm = [] 
+j_plaque = 0
+while j_plaque < nb_plaque_to_consider_all:
+       # le but est de trouver juste la ref de la plaque et la nomenclature n'est pas hyper fixe entre les HA BA Explo... 
+#            donc je me base sur la présence de 'GP' en début de ref et sur la présence de '2' au début de la date du lot et sur le fait que la ref date-num fait 9 caractères
+# ATTENTION : NE FONCTIONNERA PLUS EN 2030 ou lorsqu'on fera des lot de production de plus de 99 plaques.
+# en 2030, simplement changer le "find('2') par find('3')
+    index_debut_nom = liste_plaque[j_plaque].find(plate_type)   
+    index_debut_date = liste_plaque[j_plaque][index_debut_nom:].find('2') 
+    nb_caractere_numero_plaque = 9
+    index_fin_date = index_debut_nom+index_debut_date+nb_caractere_numero_plaque
+#            nom_gp est donc juste le nom de la plaque
+    nom_gp =  liste_plaque[j_plaque][index_debut_nom:index_fin_date]
+
+    if nom_gp not in liste_ref_plaque:
+        liste_ref_plaque.append(nom_gp)
+    j_plaque += 1   
+
+j_plaque = 0
+while j_plaque < nb_plaque_to_consider_all_nanofilm:
+       # le but est de trouver juste la ref de la plaque et la nomenclature n'est pas hyper fixe entre les HA BA Explo... 
+#            donc je me base sur la présence de 'SC' en début de ref et sur la présence de '2' au début de la date du lot et sur le fait que la ref date-num fait 9 caractères
+    index_debut_nom = liste_plaque_nanofilm[j_plaque].find(plat_type_nanofilm)   
+    index_debut_date = liste_plaque_nanofilm[j_plaque][index_debut_nom:].find('2') 
+    nb_caractere_numero_plaque = 9
+    index_fin_date = index_debut_nom+index_debut_date+nb_caractere_numero_plaque
+#            nom_gp est donc juste le nom de la plaque
+    nom_gp =  liste_plaque_nanofilm[j_plaque][index_debut_nom:index_fin_date]
+
+    if nom_gp not in liste_ref_plaque_nanofilm:
+        liste_ref_plaque_nanofilm.append(nom_gp)
+    j_plaque += 1    
+
+# ça c'est le nombre de plaque à traiter    
+nb_ref_plaque = len(liste_ref_plaque)  
+nb_ref_plaque_nanofilm = len(liste_ref_plaque_nanofilm) 
+# pour chaque plaque on va compter combien de repeta elle a 
+if nb_ref_plaque != 0:
+    nb_repeta_par_ref = np.zeros(nb_ref_plaque)
+if nb_ref_plaque_nanofilm != 0:
+    nb_repeta_par_ref_nanofilm = np.zeros(nb_ref_plaque_nanofilm)
+# on retient le nom de ces repeta 
+if nb_ref_plaque != 0:
+    name_repeta_ref = [[] for _ in range(nb_ref_plaque)]
+if nb_ref_plaque_nanofilm != 0:
+    name_repeta_ref_nanofilm = [[] for _ in range(nb_ref_plaque_nanofilm)]
+# NB: le nombre de repeta peut être différents
+
+if nb_ref_plaque != 0:
+    j_plaque = 0
+    while j_plaque < nb_ref_plaque:
+        ref = liste_ref_plaque[j_plaque]
+        j_plaque_all = 0
+        while j_plaque_all<nb_plaque_to_consider_all:
+            if ref in liste_plaque[j_plaque_all]:
+                name_repeta_ref[j_plaque].append(liste_plaque[j_plaque_all])
+                nb_repeta_par_ref[j_plaque] += 1            
+            j_plaque_all += 1
+        j_plaque += 1    
+    nb_max_de_repeta = int(np.max(nb_repeta_par_ref))
+
+if nb_ref_plaque_nanofilm != 0:
+    j_plaque = 0
+    while j_plaque < nb_ref_plaque_nanofilm:
+        ref = liste_ref_plaque_nanofilm[j_plaque]
+        j_plaque_all = 0
+        while j_plaque_all<nb_plaque_to_consider_all_nanofilm:
+            if ref in liste_plaque_nanofilm[j_plaque_all]:
+                name_repeta_ref_nanofilm[j_plaque].append(liste_plaque_nanofilm[j_plaque_all])
+                nb_repeta_par_ref_nanofilm[j_plaque] += 1            
+            j_plaque_all += 1
+        j_plaque += 1
+    nb_max_de_repeta_nanofilm = int(np.max(nb_repeta_par_ref_nanofilm))
+# contient les noms des plaques post car elle ne sont pas traitées de la même façon
+# Utiliser une variable d'environnement ou une valeur par défaut
+default_plaque_post = ['GPAxHA230712-02']
+plaque_post_env = os.environ.get('ZYMOPTIQ_PLAQUE_POST', '')
+if plaque_post_env:
+    try:
+        # Format attendu: "plaque1,plaque2,plaque3"
+        plaque_post = plaque_post_env.split(',')
+        print(f"Utilisation des plaques post depuis la variable d'environnement: {plaque_post}")
+    except Exception as e:
+        print(f"Erreur lors de la lecture des plaques post depuis la variable d'environnement: {str(e)}")
+        plaque_post = default_plaque_post
+else:
+    plaque_post = default_plaque_post
+# tracker sur quel traitement on veut lancer
+# Ces variables peuvent être configurées via des variables d'environnement
+
+# toujours désactivé pour un déploiement car pas de répéta, seulement une acquisition
+do_you_wanna_repeta_sans_ref = int(os.environ.get('ZYMOPTIQ_REPETA_SANS_REF', '0'))
+
+# =1 si mode expert, =0 si mode client car pas d'accès aux épaisseurs/volumes & diamètre en mode client
+do_you_wanna_compare_to_ref = int(os.environ.get('ZYMOPTIQ_COMPARE_TO_REF', '0'))
+
+# toujours lancer cette fonction par défaut
+do_you_wanna_compare_enzymo_to_ref = int(os.environ.get('ZYMOPTIQ_COMPARE_ENZYMO_TO_REF', '1'))
+
+print(f"Configuration des traitements:")
+print(f"- Répéta sans référence: {'Activé' if do_you_wanna_repeta_sans_ref else 'Désactivé'}")
+print(f"- Comparaison aux références: {'Activé' if do_you_wanna_compare_to_ref else 'Désactivé'}")
+print(f"- Comparaison enzymo aux références: {'Activé' if do_you_wanna_compare_enzymo_to_ref else 'Désactivé'}")
+
+
+
+if do_you_wanna_repeta_sans_ref == 1:
+    # choix du dossier racine ou seront créé les dossiers par nom de plaque qui contiendront les data de repeta
+    directory_racine_output_repeta = directory_source_valid+'\\repeta_sans_ref_v1_fct_routine'
+    if os.path.exists(directory_racine_output_repeta) == False:
+        os.mkdir(directory_racine_output_repeta)
+
+    CV_repeta_threshold = 5
+
+
+    """PLAQUES MICRO DEPOTS"""
+
+    nb_well_CV_over_threshold = np.zeros(nb_ref_plaque)
+    CV_on_volume_mean = np.zeros(nb_ref_plaque)
+    CV_on_volume_min = np.zeros(nb_ref_plaque)
+    CV_on_volume_max = np.zeros(nb_ref_plaque)
+
+    CV_on_diameter_mean = np.zeros(nb_ref_plaque)
+    CV_on_diameter_min = np.zeros(nb_ref_plaque)
+    CV_on_diameter_max = np.zeros(nb_ref_plaque)
+
+    csv_out_repeta = open(directory_racine_output_repeta+'\\data_repeta_micro_depot.csv','w')
+
+    csv_out_repeta.write('nom_plaque;nb_lecture;tolerance_en_cv_colume;nb_puits_au_dessus_du_seuil;CV_max_V;CV_min_V;CV_mean_V;CV_max_D;CV_min_D;CV_mean_D\n')
+
+    j_plaque = 0 
+    while j_plaque<nb_ref_plaque:
+        plaque_actuelle = liste_ref_plaque[j_plaque]
+    #    lancement de la fonction repeta_sans_ref_v1 sur la plaque_actuelle 
+        nb_lecture_this_plate , nb_well_over_threshold_out_fct , CV_max_V_this_plate, CV_min_V_this_plate, CV_mean_V_this_plate, CV_max_D_this_plate, CV_min_D_this_plate, CV_mean_D_this_plate, volume_mean_out_fct , volume_CV_out_fct , diametre_mean_out_fct , diametre_CV_out_fct  = repeta_sans_ref_v1(directory_source_valid,plaque_actuelle,'Images',directory_racine_output_repeta,CV_repeta_threshold)
+        nb_well_CV_over_threshold[j_plaque] = nb_well_over_threshold_out_fct
+
+        CV_on_volume_mean[j_plaque] = CV_mean_V_this_plate
+        CV_on_volume_min[j_plaque] = CV_min_V_this_plate
+        CV_on_volume_max[j_plaque] = CV_max_V_this_plate
+
+        CV_on_diameter_mean[j_plaque] = CV_mean_D_this_plate
+        CV_on_diameter_min[j_plaque] = CV_min_D_this_plate
+        CV_on_diameter_max[j_plaque] = CV_max_D_this_plate
+        csv_out_repeta.write(plaque_actuelle+';'+str(nb_lecture_this_plate)+';'+str(CV_repeta_threshold)+';'+str(nb_well_over_threshold_out_fct)+';'+str(CV_max_V_this_plate)+';'+str(CV_min_V_this_plate)+';'+str(CV_mean_V_this_plate)+';'+str(CV_max_D_this_plate)+';'+str(CV_min_D_this_plate)+';'+str(CV_mean_D_this_plate)+'\n')
+
+        j_plaque += 1
+
+    plt.close('all')
+    plt.figure(figsize=(8, 6))
+    plt.title('data_issue_agglomeration_sans_ref\n nb de puits au dessus de '+str(CV_repeta_threshold)+'% de CV en volume')
+    plt.plot(np.arange(nb_ref_plaque),nb_well_CV_over_threshold,'*')  
+    #plt.xticks(np.arange(nb_ref_plaque),liste_plaque, rotation=10)      
+    plt.xlabel('plaques')
+    plt.ylabel('nb de puits')
+    plt.savefig(directory_racine_output_repeta+'\\nb de puits au dessus de '+str(CV_repeta_threshold)+'% de CV en volume.jpg')
+
+    plt.close('all')
+    plt.figure(figsize=(8, 6))
+    plt.title('data_issue_agglomeration_sans_ref\n CV moyen sur les volumes sur toute la plaque')
+    plt.plot(np.arange(nb_ref_plaque),CV_on_volume_mean,'o',color = '#20B2AA',label='mean')  
+    plt.plot(np.arange(nb_ref_plaque),CV_on_volume_min,marker="_",ls='',color = '#20B2AA',label='min')
+    plt.plot(np.arange(nb_ref_plaque),CV_on_volume_max,marker="_",ls='',color = '#20B2AA',label='max')       
+    #plt.xticks(np.arange(nb_ref_plaque),liste_plaque, rotation=10)  
+    plt.legend()    
+    plt.xlabel('plaques')
+    plt.ylabel('CV moyen sur les volumes en % ')
+    plt.savefig(directory_racine_output_repeta+'\\CV_on_volume_mean.jpg')
+
+    plt.close('all')
+    plt.figure(figsize=(8, 6))
+    plt.title('data_issue_agglomeration_sans_ref\n CV moyen sur les diametre sur toute la plaque')
+    plt.plot(np.arange(nb_ref_plaque),CV_on_diameter_mean,'v',color = '#191970')  
+    plt.plot(np.arange(nb_ref_plaque),CV_on_diameter_min,marker="_",ls='',color = '#191970',label='min')
+    plt.plot(np.arange(nb_ref_plaque),CV_on_diameter_max,marker="_",ls='',color = '#191970',label='max')       
+    #plt.xticks(np.arange(nb_ref_plaque),liste_plaque, rotation=10)      
+    plt.xlabel('plaques')
+    plt.ylabel('CV moyen sur les diametre en % ')
+    plt.savefig(directory_racine_output_repeta+'\\CV_on_diameter_mean.jpg')
+
+    csv_out_repeta.close()
+
+    """ PLAQUES NANOFILM"""
+
+    nb_well_CV_over_threshold = np.zeros(nb_ref_plaque_nanofilm)
+
+    CV_on_thickness_mean = np.zeros(nb_ref_plaque_nanofilm)
+    CV_on_thickness_min = np.zeros(nb_ref_plaque_nanofilm)
+    CV_on_thickness_max = np.zeros(nb_ref_plaque_nanofilm)
+
+    CV_on_I4_mean = np.zeros(nb_ref_plaque_nanofilm)
+    CV_on_I4_min = np.zeros(nb_ref_plaque_nanofilm)
+    CV_on_I4_max = np.zeros(nb_ref_plaque_nanofilm)
+
+    CV_on_I7_mean = np.zeros(nb_ref_plaque_nanofilm)
+    CV_on_I7_min = np.zeros(nb_ref_plaque_nanofilm)
+    CV_on_I7_max = np.zeros(nb_ref_plaque_nanofilm)
+
+
+    csv_out_repeta_nanofilm = open(directory_racine_output_repeta+'\\data_repeta_nanofilm.csv','w')
+
+    csv_out_repeta_nanofilm.write('nom_plaque;nb_lecture;tolerance_en_cv_épaisseur;nb_puits_au_dessus_du_seuil;CV_max_T;CV_min_T;CV_mean_T;CV_max_I455;CV_min_I455;CV_mean_I455;CV_max_I730;CV_min_I730;CV_mean_I730\n')
+
+    j_plaque = 0 
+    while j_plaque<nb_ref_plaque_nanofilm:
+        plaque_actuelle = liste_ref_plaque_nanofilm[j_plaque]
+    #    lancement de la fonction repeta_sans_ref_v1 sur la plaque_actuelle 
+        nb_lecture_this_plate , nb_well_over_threshold_out_fct , CV_max_T_this_plate, CV_min_T_this_plate, CV_mean_T_this_plate, CV_max_I4_this_plate, CV_min_I4_this_plate, CV_mean_I4_this_plate, CV_max_I7_this_plate, CV_min_I7_this_plate, CV_mean_I7_this_plate, thickness_mean_out_fct ,         thickness_CV_out_fct ,       intensity_455_mean_out_fct ,       intensity_455_CV_out_fct ,         intensity_730_mean_out_fct ,       intensity_730_CV_out_fct = repeta_sans_ref_v1_nanofilm(directory_source_valid,plaque_actuelle,'Images',directory_racine_output_repeta,CV_repeta_threshold)
+        """
+        nb_iteration , nb_well_over_threshold ,                  CV_max_thickness,     CV_min_thickness,   CV_mean_thickness,    CV_max_I4,             CV_min_I4,           CV_mean_I4 ,           CV_max_I7,            CV_min_I7,            CV_mean_I7,             thickness_mean_for_this_plate , thickness_CV_for_this_plate , intensity_455_mean_for_this_plate , intensity_455_CV_for_this_plate , intensity_730_mean_for_this_plate , intensity_730_CV_for_this_plate
+        """
+        nb_well_CV_over_threshold[j_plaque] = nb_well_over_threshold_out_fct
+
+        CV_on_thickness_mean[j_plaque] = CV_mean_T_this_plate
+        CV_on_thickness_min[j_plaque] = CV_min_T_this_plate
+        CV_on_thickness_max[j_plaque] = CV_max_T_this_plate
+
+        CV_on_I4_mean[j_plaque] = CV_mean_I4_this_plate
+        CV_on_I4_min[j_plaque] = CV_min_I4_this_plate
+        CV_on_I4_max[j_plaque] = CV_max_I4_this_plate
+
+        CV_on_I7_mean[j_plaque] = CV_mean_I7_this_plate
+        CV_on_I7_min[j_plaque] = CV_min_I7_this_plate
+        CV_on_I7_max[j_plaque] = CV_max_I7_this_plate
+        csv_out_repeta_nanofilm.write(plaque_actuelle+';'+str(nb_lecture_this_plate)+';'+str(CV_repeta_threshold)+';'+str(nb_well_over_threshold_out_fct)+';'+str(CV_max_T_this_plate)+';'+str(CV_min_T_this_plate)+';'+str(CV_mean_T_this_plate)+';'+str(CV_max_I4_this_plate)+';'+str(CV_min_I4_this_plate)+';'+str(CV_mean_I4_this_plate)+';'+str(CV_max_I7_this_plate)+';'+str(CV_min_I7_this_plate)+';'+str(CV_mean_I7_this_plate)+'\n')
+
+        j_plaque += 1
+
+    plt.close('all')
+    plt.figure(figsize=(8, 6))
+    plt.title('data_issue_agglomeration_sans_ref\n nb de puits au dessus de '+str(CV_repeta_threshold)+'% de CV en épaisseur')
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),nb_well_CV_over_threshold,'*')  
+    #plt.xticks(np.arange(nb_ref_plaque),liste_plaque, rotation=10)      
+    plt.xlabel('plaques')
+    plt.ylabel('nb de puits')
+    plt.savefig(directory_racine_output_repeta+'\\nb de puits au dessus de '+str(CV_repeta_threshold)+'% de CV en epaisseur.jpg')
+
+    plt.close('all')
+    plt.figure(figsize=(8, 6))
+    plt.title('data_issue_agglomeration_sans_ref\n CV moyen sur les épaisseurs sur toute la plaque')
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_thickness_mean,'o',color = '#20B2AA',label='mean')  
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_thickness_min,marker="_",ls='',color = '#20B2AA',label='min')
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_thickness_max,marker="_",ls='',color = '#20B2AA',label='max')       
+    #plt.xticks(np.arange(nb_ref_plaque),liste_plaque, rotation=10)  
+    plt.legend()    
+    plt.xlabel('plaques')
+    plt.ylabel('CV moyen sur les épaisseurs en % ')
+    plt.savefig(directory_racine_output_repeta+'\\CV_on_thichness_mean.jpg')
+
+    plt.close('all')
+    plt.figure(figsize=(8, 6))
+    plt.title('data_issue_agglomeration_sans_ref\n CV moyen sur les intensités 455 sur toute la plaque')
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_I4_mean,'v',color = '#191970')  
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_I4_min,marker="_",ls='',color = '#191970',label='min')
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_I4_max,marker="_",ls='',color = '#191970',label='max')       
+    #plt.xticks(np.arange(nb_ref_plaque),liste_plaque, rotation=10)      
+    plt.xlabel('plaques')
+    plt.ylabel('CV moyen sur les intensités 455 en % ')
+    plt.savefig(directory_racine_output_repeta+'\\CV_on_I4_mean.jpg')
+
+    plt.close('all')
+    plt.figure(figsize=(8, 6))
+    plt.title('data_issue_agglomeration_sans_ref\n CV moyen sur les intensités 730 sur toute la plaque')
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_I7_mean,'v',color = '#191970')  
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_I7_min,marker="_",ls='',color = '#191970',label='min')
+    plt.plot(np.arange(nb_ref_plaque_nanofilm),CV_on_I7_max,marker="_",ls='',color = '#191970',label='max')       
+    #plt.xticks(np.arange(nb_ref_plaque),liste_plaque, rotation=10)      
+    plt.xlabel('plaques')
+    plt.ylabel('CV moyen sur les intensités 730 en % ')
+    plt.savefig(directory_racine_output_repeta+'\\CV_on_I7_mean.jpg')
+
+
+    csv_out_repeta_nanofilm.close()
+
+if do_you_wanna_compare_to_ref == 1:
+
+    # le nom de l'instrument 1 : a valider
+    type_intrument_1 = 'ZC20'
+    # le nom de l'instrument 2 : référence
+    type_intrument_2 = 'ZC20'
+    # chemin vers les dossiers contenant les data des 2 instruments
+    directory_source_instrument_1 =  directory_source_valid
+    directory_source_instrument_2 =  directory_source_reference
+
+    # dossier racine des dossiers résultats
+    directory_racine_to_save = directory_source_valid+"\\comparaison_proto_fct_routine"
+    # Utiliser makedirs pour créer tous les répertoires parents si nécessaire
+    os.makedirs(directory_racine_to_save, exist_ok=True)
+
+    """ PLAQUES MICRO-DEPOTS """
+    if nb_ref_plaque != 0:
+        slope_fit_save = np.zeros((nb_ref_plaque,nb_max_de_repeta)) 
+        intercept_fit_save = np.zeros((nb_ref_plaque,nb_max_de_repeta)) 
+        r_value_fit_save = np.zeros((nb_ref_plaque,nb_max_de_repeta)) 
+        nb_puits_loin_fit_save = np.zeros((nb_ref_plaque,nb_max_de_repeta)) 
+
+        pourcentage_volume_relative_mean_save = np.zeros((nb_ref_plaque,nb_max_de_repeta)) 
+        pourcentage_volume_relative_CV_save = np.zeros((nb_ref_plaque,nb_max_de_repeta)) 
+        pourcentage_diametre_relative_mean_save = np.zeros((nb_ref_plaque,nb_max_de_repeta)) 
+        pourcentage_diametre_relative_CV_save = np.zeros((nb_ref_plaque,nb_max_de_repeta)) 
+
+        to_plot_vol_instrument_1 = np.zeros((96,nb_max_de_repeta))
+        to_plot_vol_instrument_2 = np.zeros((96,nb_max_de_repeta))
+    # initialisation à nan car si on met 0 et que le nombre de répéta n'est pas fixe, on va garder des zéros qui ne seront pas des données mais un manque de données -> risque de faussage de moyennes etc...    
+        slope_fit_save[:,:] = np.nan
+        intercept_fit_save[:,:]  = np.nan
+        r_value_fit_save[:,:]  = np.nan
+        nb_puits_loin_fit_save[:,:]  = np.nan
+
+        csv_out_compare_to_ref = open(directory_racine_to_save+'\\data_compar_ref_micro_depots.csv','w')
+
+        csv_out_compare_to_ref.write('nom_plaque;slope_fit;intercept_fit;r_value_fit;nb_puits_loin_fit;pourcentage_volume_relative_mean;pourcentage_volume_relative_CV;pourcentage_diametre_relative_mean;pourcentage_diametre_relative_CV\n')
+
+        j_plaque = 0 
+        while j_plaque<nb_ref_plaque:
+            directory_racine_to_save_plate = directory_racine_to_save+"\\"+liste_ref_plaque[j_plaque]
+            if os.path.exists(directory_racine_to_save_plate) == False:
+                os.mkdir(directory_racine_to_save_plate)
+
+            color2 = gen_color(cmap="tab10",n=int(nb_repeta_par_ref[j_plaque]))
+            to_plot_vol_instrument_1[:,:] = np.nan
+            to_plot_vol_instrument_2[:,:] = np.nan        
+            tic()
+            j_repeta = 0
+            while j_repeta <nb_repeta_par_ref[j_plaque]:
+                name_dossier_instrument_1 =  name_repeta_ref[j_plaque][j_repeta] 
+                # le but est de trouver juste la ref de la plaque et la nomenclature n'est pas hyper fixe entre les HA BA Explo... 
+    #            donc je me base sur la présence de 'GP' en début de ref et sur la présence de '2' au début de la date du lot et sur le fait que la ref date-num fait 9 caractères
+                index_debut_nom = name_dossier_instrument_1.find('GP')   
+                index_debut_date = name_dossier_instrument_1[index_debut_nom:].find('2') 
+                nb_caractere_numero_plaque = 9
+                index_fin_date = index_debut_nom+index_debut_date+nb_caractere_numero_plaque
+    #            nom_gp est donc juste le nom de la plaque
+                nom_gp = name_dossier_instrument_1[index_debut_nom:index_fin_date]
+
+                chemin_instru_1 = directory_source_instrument_1+'\\'+name_dossier_instrument_1+'\\Images'
+                # chemin_instru_1 = directory_source_instrument_1+'\\'+name_dossier_instrument_1+'\\730_ZI'
+                chemin_instru_2 = directory_source_instrument_2+'\\'+nom_gp+'\\Images'
+                # chemin_instru_2 = directory_source_instrument_2+'\\'+nom_gp+'\\expo\\730_ZI'
+                if nom_gp in plaque_post:
+                    chemin_instru_2 = directory_source_instrument_2+'\\'+nom_gp+'\\post\\730_ZI'
+                tolerance_ecart_au_fit = 10
+
+                name_dossier_to_save, slope_fit, intercept_fit, r_value_fit, nb_puits_loin_fit, pourcentage_volume_relative_mean , pourcentage_volume_relative_CV , pourcentage_diametre_relative_mean , pourcentage_diametre_relative_CV , vecteur_volume_instrument_1, vecteur_volume_instrument_2 = comparaison_ZC_to_ref_v1(nom_gp,chemin_instru_1,type_intrument_1,chemin_instru_2,type_intrument_2,directory_racine_to_save_plate,name_dossier_instrument_1,tolerance_ecart_au_fit)
+    #            enregistrement dans les tableaux des KPI
+                slope_fit_save [j_plaque][j_repeta] = slope_fit
+                intercept_fit_save [j_plaque][j_repeta] = intercept_fit
+                r_value_fit_save [j_plaque][j_repeta] = r_value_fit
+                nb_puits_loin_fit_save [j_plaque][j_repeta] = nb_puits_loin_fit
+                to_plot_vol_instrument_1[:,j_repeta] = np.copy(vecteur_volume_instrument_1)
+                to_plot_vol_instrument_2[:,j_repeta] = np.copy(vecteur_volume_instrument_2)    
+                pourcentage_volume_relative_mean_save [j_plaque][j_repeta] = pourcentage_volume_relative_mean
+                pourcentage_volume_relative_CV_save [j_plaque][j_repeta] = pourcentage_volume_relative_CV
+                pourcentage_diametre_relative_mean_save [j_plaque][j_repeta] = pourcentage_diametre_relative_mean
+                pourcentage_diametre_relative_CV_save [j_plaque][j_repeta] = pourcentage_diametre_relative_CV        
+                csv_out_compare_to_ref.write(name_repeta_ref[j_plaque][j_repeta] +';'+str(slope_fit)+';'+str(intercept_fit)+';'+str(r_value_fit)+';'+str(nb_puits_loin_fit)+';'+str(pourcentage_volume_relative_mean)+';'+str(pourcentage_volume_relative_CV)+';'+str(pourcentage_diametre_relative_mean)+';'+str(pourcentage_diametre_relative_CV)+'\n')
+    #            la figure rassemblée est sortie de la boucle ici car dans la fonction comparaison_ZC_to_ref_v1, close('all') empeche d'ajouter au fur et à mesure
+                j_repeta += 1
+
+            pente_moyenne = np.mean(slope_fit_save [j_plaque][:])
+            pente_std = np.std(slope_fit_save [j_plaque][:])
+            pente_CV = pente_std/pente_moyenne*100
+
+            intercept_fit_moyenne = np.mean(intercept_fit_save [j_plaque][:])
+            intercept_fit_std = np.std(intercept_fit_save [j_plaque][:])
+            intercept_fit_CV = intercept_fit_std/intercept_fit_moyenne*100
+
+            plt.close('all')
+            plt.figure(1,figsize=(12,12))
+            plt.title(liste_ref_plaque[j_plaque]+' sur '+str(int(nb_repeta_par_ref[j_plaque]))+' runs')
+            plt.suptitle('Agglomération des data des comparaisons de volumes selon la repeta et de leur fit')
+            j_repeta = 0
+            while j_repeta<nb_repeta_par_ref[j_plaque]:
+                x_fit = np.arange(np.nanmin(to_plot_vol_instrument_2[:,j_repeta]),np.nanmax(to_plot_vol_instrument_2[:,j_repeta]))
+                plt.plot(to_plot_vol_instrument_2[:,j_repeta],to_plot_vol_instrument_1[:,j_repeta],'.',color= color2[j_repeta],label=name_repeta_ref[j_plaque][j_repeta])  
+                plt.plot(x_fit,x_fit*slope_fit_save [j_plaque][j_repeta]+intercept_fit_save [j_plaque][j_repeta],'--',color= color2[j_repeta],label='fit s='+str(round(slope_fit_save [j_plaque][j_repeta],4))+' i='+str(round(intercept_fit_save [j_plaque][j_repeta],2))+'R²='+str(round(r_value_fit_save [j_plaque][j_repeta],3)))  
+                j_repeta += 1
+            plt.xlabel('V '+type_intrument_2+' µm^3')
+            plt.ylabel('V '+type_intrument_1+' µm^3')
+            plt.legend()  
+            plt.savefig(directory_racine_to_save+'\\aglomeration_fit_to_ref_'+liste_ref_plaque[j_plaque]+'.jpg')
+
+            toc()
+
+            plt.figure(2,figsize=(8,6))
+            plt.suptitle('pente des fits')
+            plt.title(liste_ref_plaque[j_plaque]+' sur '+str(int(nb_repeta_par_ref[j_plaque]))+' runs\n pente moyenne = '+str(round(pente_moyenne,4))+' avec un CV de '+str(round(pente_CV,1))+ ' %')
+            plt.plot(np.arange(nb_repeta_par_ref[j_plaque]),slope_fit_save [j_plaque],marker="o",ls='',color = '#191970')       
+    #        plt.xlabel('plaques')
+            plt.ylabel('fit slope')
+            #plt.xticks(np.arange(nb_repeta_par_ref[j_plaque]),name_repeta_ref[j_plaque][:] , rotation=10)      
+            plt.legend()  
+            plt.savefig(directory_racine_to_save+'\\pente_fit_to_ref_'+liste_ref_plaque[j_plaque]+'.jpg')
+
+            plt.figure(3,figsize=(12,12))
+            plt.title(liste_ref_plaque[j_plaque]+' sur '+str(int(nb_repeta_par_ref[j_plaque]))+' runs\n intercept moyen = '+str(round(intercept_fit_moyenne,4))+' avec un CV de '+str(round(intercept_fit_CV,1))+ ' %')
+            plt.suptitle('intercept des fits')
+            plt.plot(np.arange(nb_repeta_par_ref[j_plaque]),intercept_fit_save[j_plaque],marker="s",ls='',color = '#FFD700')       
+    #        plt.xlabel('plaques')
+            plt.ylabel('fit intercept')
+            #plt.xticks(np.arange(nb_repeta_par_ref[j_plaque]), [j_plaque][:] , rotation=10)      
+            plt.legend()  
+            plt.savefig(directory_racine_to_save+'\\intercept_fit_to_ref_'+liste_ref_plaque[j_plaque]+'.jpg')
+
+            j_plaque += 1
+
+        csv_out_compare_to_ref.close()
+
+    """ PLAQUES NANOFILMS """
+    if nb_ref_plaque_nanofilm != 0:
+        slope_fit_save = np.zeros((nb_ref_plaque_nanofilm,nb_max_de_repeta_nanofilm)) 
+        intercept_fit_save = np.zeros((nb_ref_plaque_nanofilm,nb_max_de_repeta_nanofilm)) 
+        r_value_fit_save = np.zeros((nb_ref_plaque_nanofilm,nb_max_de_repeta_nanofilm)) 
+        nb_puits_loin_fit_save = np.zeros((nb_ref_plaque_nanofilm,nb_max_de_repeta_nanofilm)) 
+
+        pourcentage_thickness_relative_mean_save = np.zeros((nb_ref_plaque_nanofilm,nb_max_de_repeta_nanofilm)) 
+        pourcentage_thickness_relative_CV_save = np.zeros((nb_ref_plaque_nanofilm,nb_max_de_repeta_nanofilm))  
+
+        to_plot_thick_instrument_1 = np.zeros((96,nb_max_de_repeta_nanofilm))
+        to_plot_thick_instrument_2 = np.zeros((96,nb_max_de_repeta_nanofilm))
+    # initialisation à nan car si on met 0 et que le nombre de répéta n'est pas fixe, on va garder des zéros qui ne seront pas des données mais un manque de données -> risque de faussage de moyennes etc...    
+        slope_fit_save[:,:] = np.nan
+        intercept_fit_save[:,:]  = np.nan
+        r_value_fit_save[:,:]  = np.nan
+        nb_puits_loin_fit_save[:,:]  = np.nan
+
+        csv_out_compare_to_ref_nanofilm = open(directory_racine_to_save+'\\data_compar_ref_nanofilm.csv','w')
+
+        csv_out_compare_to_ref_nanofilm.write('nom_plaque;slope_fit;intercept_fit;r_value_fit;nb_puits_loin_fit;pourcentage_thickness_relative_mean;pourcentage_thickness_relative_CV\n')
+
+        j_plaque = 0 
+        while j_plaque<nb_ref_plaque_nanofilm:
+            directory_racine_to_save_plate = directory_racine_to_save+"\\"+liste_ref_plaque_nanofilm[j_plaque]
+            if os.path.exists(directory_racine_to_save_plate) == False:
+                os.mkdir(directory_racine_to_save_plate)
+
+            color2 = gen_color(cmap="tab10",n=int(nb_repeta_par_ref_nanofilm[j_plaque]))
+            to_plot_thick_instrument_1[:,:] = np.nan
+            to_plot_thick_instrument_2[:,:] = np.nan        
+            tic()
+            j_repeta = 0
+            while j_repeta <nb_repeta_par_ref_nanofilm[j_plaque]:
+                name_dossier_instrument_1 =  name_repeta_ref_nanofilm[j_plaque][j_repeta] 
+                # le but est de trouver juste la ref de la plaque et la nomenclature n'est pas hyper fixe entre les HA BA Explo... 
+    #            donc je me base sur la présence de 'GP' en début de ref et sur la présence de '2' au début de la date du lot et sur le fait que la ref date-num fait 9 caractères
+                index_debut_nom = name_dossier_instrument_1.find('SC')   
+                index_debut_date = name_dossier_instrument_1[index_debut_nom:].find('2') 
+                nb_caractere_numero_plaque = 9
+                index_fin_date = index_debut_nom+index_debut_date+nb_caractere_numero_plaque
+    #            nom_gp est donc juste le nom de la plaque
+                nom_gp = name_dossier_instrument_1[index_debut_nom:index_fin_date]
+
+                chemin_instru_1 = directory_source_instrument_1+'\\'+name_dossier_instrument_1+'\\Images'
+                # chemin_instru_1 = directory_source_instrument_1+'\\'+name_dossier_instrument_1+'\\730_ZI'
+                chemin_instru_2 = directory_source_instrument_2+'\\'+nom_gp+'\\Images'
+                # chemin_instru_2 = directory_source_instrument_2+'\\'+nom_gp+'\\expo\\730_ZI'
+                if nom_gp in plaque_post:
+                    chemin_instru_2 = directory_source_instrument_2+'\\'+nom_gp+'\\post\\730_ZI'
+                tolerance_ecart_au_fit = 10
+
+                # print('\n\n\nslope_fit_save à vérifier : \n\n',slope_fit_save)
+
+                name_dossier_to_save, slope_fit, intercept_fit, r_value_fit, nb_puits_loin_fit, pourcentage_thickness_relative_mean , pourcentage_thickness_relative_CV , vecteur_thickness_instrument_1, vecteur_thickness_instrument_2 = comparaison_ZC_to_ref_v1_nanofilm(nom_gp,chemin_instru_1,type_intrument_1,chemin_instru_2,type_intrument_2,directory_racine_to_save_plate,name_dossier_instrument_1,tolerance_ecart_au_fit)
+    #            enregistrement dans les tableaux des KPI
+                slope_fit_save[j_plaque][j_repeta] = slope_fit
+                intercept_fit_save [j_plaque][j_repeta] = intercept_fit
+                r_value_fit_save [j_plaque][j_repeta] = r_value_fit
+                nb_puits_loin_fit_save [j_plaque][j_repeta] = nb_puits_loin_fit
+                to_plot_thick_instrument_1[:,j_repeta] = np.copy(vecteur_thickness_instrument_1)
+                to_plot_thick_instrument_2[:,j_repeta] = np.copy(vecteur_thickness_instrument_2)    
+                pourcentage_thickness_relative_mean_save [j_plaque][j_repeta] = pourcentage_thickness_relative_mean
+                pourcentage_thickness_relative_CV_save [j_plaque][j_repeta] = pourcentage_thickness_relative_CV
+                csv_out_compare_to_ref_nanofilm.write(name_repeta_ref_nanofilm[j_plaque][j_repeta] +';'+str(slope_fit)+';'+str(intercept_fit)+';'+str(r_value_fit)+';'+str(nb_puits_loin_fit)+';'+str(pourcentage_thickness_relative_mean)+';'+str(pourcentage_thickness_relative_CV)+'\n')
+    #            la figure rassemblée est sortie de la boucle ici car dans la fonction comparaison_ZC_to_ref_v1, close('all') empeche d'ajouter au fur et à mesure
+                j_repeta += 1
+
+            pente_moyenne = np.mean(slope_fit_save[j_plaque][:])
+            pente_std = np.std(slope_fit_save[j_plaque][:])
+            pente_CV = pente_std/pente_moyenne*100
+
+            intercept_fit_moyenne = np.mean(intercept_fit_save [j_plaque][:])
+            intercept_fit_std = np.std(intercept_fit_save [j_plaque][:])
+            intercept_fit_CV = intercept_fit_std/intercept_fit_moyenne*100
+
+            plt.close('all')
+            plt.figure(1,figsize=(12,12))
+            plt.title(liste_ref_plaque_nanofilm[j_plaque]+' sur '+str(int(nb_repeta_par_ref_nanofilm[j_plaque]))+' runs')
+            plt.suptitle('Agglomération des data des comparaisons d\'épaisseur selon la repeta et de leur fit')
+            j_repeta = 0
+            while j_repeta<nb_repeta_par_ref_nanofilm[j_plaque]:
+                x_fit = np.arange(np.nanmin(to_plot_thick_instrument_2[:,j_repeta]),np.nanmax(to_plot_thick_instrument_2[:,j_repeta]))
+                plt.plot(to_plot_thick_instrument_2[:,j_repeta],to_plot_thick_instrument_1[:,j_repeta],'.',color= color2[j_repeta],label=name_repeta_ref_nanofilm[j_plaque][j_repeta])  
+                plt.plot(x_fit,x_fit*slope_fit_save[j_plaque][j_repeta]+intercept_fit_save [j_plaque][j_repeta],'--',color= color2[j_repeta],label='fit s='+str(round(slope_fit_save [j_plaque][j_repeta],4))+' i='+str(round(intercept_fit_save [j_plaque][j_repeta],2))+'R²='+str(round(r_value_fit_save [j_plaque][j_repeta],3)))  
+                j_repeta += 1
+            plt.xlabel('T '+type_intrument_2+' nm')
+            plt.ylabel('T '+type_intrument_1+' nm')
+            plt.legend()  
+            plt.savefig(directory_racine_to_save+'\\aglomeration_fit_to_ref_'+liste_ref_plaque_nanofilm[j_plaque]+'.jpg')
+
+            toc()
+
+            # print('\n\n\nnb_repeta_par_ref_nanofilm à vérifier : \n\n',nb_repeta_par_ref_nanofilm)
+            # print('\n\n\nslope_fit_save à vérifier : \n\n',slope_fit_save)
+
+            slope_fit_save_plt = [[value for value in sublist if not np.isnan(value)]for sublist in slope_fit_save]
+            intercept_fit_save_plt = [[value for value in sublist if not np.isnan(value)]for sublist in intercept_fit_save]
+
+            plt.figure(2,figsize=(8,6))
+            plt.suptitle('pente des fits')
+            plt.title(liste_ref_plaque_nanofilm[j_plaque]+' sur '+str(int(nb_repeta_par_ref_nanofilm[j_plaque]))+' runs\n pente moyenne = '+str(round(pente_moyenne,4))+' avec un CV de '+str(round(pente_CV,1))+ ' %')
+            plt.plot(np.arange(nb_repeta_par_ref_nanofilm[j_plaque]),slope_fit_save_plt[j_plaque],marker="o",ls='',color = '#191970')       
+    #        plt.xlabel('plaques')
+            plt.ylabel('fit slope')
+            #plt.xticks(np.arange(nb_repeta_par_ref[j_plaque]),name_repeta_ref[j_plaque][:] , rotation=10)      
+            plt.legend()  
+            plt.savefig(directory_racine_to_save+'\\pente_fit_to_ref_'+liste_ref_plaque_nanofilm[j_plaque]+'.jpg')
+
+            plt.figure(3,figsize=(12,12))
+            plt.title(liste_ref_plaque_nanofilm[j_plaque]+' sur '+str(int(nb_repeta_par_ref_nanofilm[j_plaque]))+' runs\n intercept moyen = '+str(round(intercept_fit_moyenne,4))+' avec un CV de '+str(round(intercept_fit_CV,1))+ ' %')
+            plt.suptitle('intercept des fits')
+            plt.plot(np.arange(nb_repeta_par_ref_nanofilm[j_plaque]),intercept_fit_save_plt[j_plaque],marker="s",ls='',color = '#FFD700')       
+    #        plt.xlabel('plaques')
+            plt.ylabel('fit intercept')
+            #plt.xticks(np.arange(nb_repeta_par_ref[j_plaque]), [j_plaque][:] , rotation=10)      
+            plt.legend()  
+            plt.savefig(directory_racine_to_save+'\\intercept_fit_to_ref_'+liste_ref_plaque_nanofilm[j_plaque]+'.jpg')
+
+            j_plaque += 1
+
+        csv_out_compare_to_ref_nanofilm.close()
+
+if do_you_wanna_compare_enzymo_to_ref == 1:
+
+    # le nom de l'instrument 1 : référence
+    type_instrument_1 = nom_machine_reference
+    # le nom de l'instrument 2 : à valider
+    type_instrument_2 = nom_machine_a_valider
+    # chemin vers les dossiers contenant les data des 2 instruments
+    directory_source_instrument_1 = directory_source_reference
+    directory_source_instrument_2 =  directory_source_valid
+
+    # dossier racine des dossiers résultats
+    directory_racine_to_save = directory_source_valid+"\\comparaison_enzymo_routine"
+    # Utiliser makedirs pour créer tous les répertoires parents si nécessaire
+    os.makedirs(directory_racine_to_save, exist_ok=True)
+
+    #contient les dossiers des acquisitions de référence donc une acquisition par plaque
+    #avec les noms seulement de plaque
+    #exemple : GPAxHA220203-05
+    liste_acquisitions_references = []
+    if os.path.exists(directory_source_instrument_1):
+        try:
+            liste_acquisitions_references = os.listdir(directory_source_instrument_1)
+            print(f"Nombre d'acquisitions de référence trouvées: {len(liste_acquisitions_references)}")
+        except Exception as e:
+            print(f"Erreur lors de la lecture du répertoire {directory_source_instrument_1}: {str(e)}")
+    else:
+        print(f"Le répertoire de référence {directory_source_instrument_1} n'existe pas.")
+        # Créer le répertoire s'il n'existe pas
+        os.makedirs(directory_source_instrument_1, exist_ok=True)
+        print(f"Répertoire {directory_source_instrument_1} créé.")
+
+    all_results = []
+
+    """ PLAQUES MICRO6DEPOTS """
+    if nb_ref_plaque != 0 and liste_acquisitions_references:
+        j_plaque = 0 
+        while j_plaque<nb_plaque_to_consider_all:
+
+            indic_post = 0
+            for i in range(len(plaque_post)):
+                if plaque_post[i] in liste_plaque[j_plaque]:
+                    indic_post += 1
+
+            if indic_post == 0:
+                # Vérifier si on peut trouver une acquisition de référence correspondante
+                acquisition_ref_trouvee = False
+                j_find = 0
+
+                # Chercher une acquisition de référence qui correspond à la plaque actuelle
+                while j_find < len(liste_acquisitions_references):
+                    if liste_acquisitions_references[j_find] in liste_plaque[j_plaque]:
+                        acquisition_ref_trouvee = True
+                        break
+                    j_find += 1
+
+                if acquisition_ref_trouvee:
+                    try:
+                        # Test si le fichier WellResults de l'acquisition de référence contient plusieurs onglets
+                        excel_path = os.path.join(directory_source_instrument_1, liste_acquisitions_references[j_find], 'WellResults.xlsx')
+                        if os.path.exists(excel_path):
+                            excel_file = pandas.ExcelFile(excel_path)
+                            noms_onglets = excel_file.sheet_names
+
+                            for onglet in range(len(noms_onglets)):
+                                data_enzymo_reference, data_enzymo_machine_a_valider = compare_enzymo_2_ref(
+                                    directory_source_instrument_1, type_instrument_1, liste_acquisitions_references[j_find], 
+                                    noms_onglets[onglet], directory_source_instrument_2, type_instrument_2, 
+                                    liste_plaque[j_plaque], directory_racine_to_save
+                                )
+
+                                all_results.append(data_enzymo_reference)
+                                all_results.append(data_enzymo_machine_a_valider)
+                        else:
+                            print(f"Le fichier WellResults.xlsx n'existe pas dans {os.path.dirname(excel_path)}")
+                    except Exception as e:
+                        print(f"Erreur lors du traitement de la plaque {liste_plaque[j_plaque]}: {str(e)}")
+                else:
+                    print(f"Aucune acquisition de référence trouvée pour la plaque {liste_plaque[j_plaque]}")
+
+            j_plaque += 1
+    elif nb_ref_plaque != 0:
+        print("Aucune acquisition de référence trouvée. Impossible de comparer les plaques micro-dépôts.")
+
+    """ PLAQUES NANOFILMS """
+    if nb_ref_plaque_nanofilm != 0 and liste_acquisitions_references:
+        j_plaque = 0 
+        while j_plaque<nb_plaque_to_consider_all_nanofilm:
+
+            indic_post = 0
+            for i in range(len(plaque_post)):
+                if plaque_post[i] in liste_plaque_nanofilm[j_plaque]:
+                    indic_post += 1
+
+            if indic_post == 0:
+                # Vérifier si on peut trouver une acquisition de référence correspondante
+                acquisition_ref_trouvee = False
+                j_find = 0
+
+                # Chercher une acquisition de référence qui correspond à la plaque actuelle
+                while j_find < len(liste_acquisitions_references):
+                    if liste_acquisitions_references[j_find] in liste_plaque_nanofilm[j_plaque]:
+                        acquisition_ref_trouvee = True
+                        break
+                    j_find += 1
+
+                if acquisition_ref_trouvee:
+                    try:
+                        # Test si le fichier WellResults de l'acquisition de référence contient plusieurs onglets
+                        excel_path = os.path.join(directory_source_instrument_1, liste_acquisitions_references[j_find], 'WellResults.xlsx')
+                        if os.path.exists(excel_path):
+                            excel_file = pandas.ExcelFile(excel_path)
+                            noms_onglets = excel_file.sheet_names
+
+                            for onglet in range(len(noms_onglets)):
+                                data_enzymo_reference, data_enzymo_machine_a_valider = compare_enzymo_2_ref(
+                                    directory_source_instrument_1, type_instrument_1, liste_acquisitions_references[j_find], 
+                                    noms_onglets[onglet], directory_source_instrument_2, type_instrument_2, 
+                                    liste_plaque_nanofilm[j_plaque], directory_racine_to_save
+                                )
+
+                                all_results.append(data_enzymo_reference)
+                                all_results.append(data_enzymo_machine_a_valider)
+                        else:
+                            print(f"Le fichier WellResults.xlsx n'existe pas dans {os.path.dirname(excel_path)}")
+                    except Exception as e:
+                        print(f"Erreur lors du traitement de la plaque nanofilm {liste_plaque_nanofilm[j_plaque]}: {str(e)}")
+                else:
+                    print(f"Aucune acquisition de référence trouvée pour la plaque nanofilm {liste_plaque_nanofilm[j_plaque]}")
+
+            j_plaque += 1
+    elif nb_ref_plaque_nanofilm != 0:
+        print("Aucune acquisition de référence trouvée. Impossible de comparer les plaques nanofilms.")
+
+    # Vérifier si nous avons des résultats à écrire
+    if all_results:
+        find_len_max = 0
+        for i in range(len(all_results)):
+            if len(all_results[i]) > find_len_max:
+                find_len_max = len(all_results[i])
+
+        # Créer le fichier CSV de résultats
+        csv_path = os.path.join(directory_racine_to_save, 'data_compar_enzymo_2_ref.csv')
+        try:
+            with open(csv_path, 'w') as csv_out_compare_enzymo_to_ref:
+                # Écrire l'en-tête
+                csv_out_compare_enzymo_to_ref.write('Nom de l Acquisitions;Machine;Zone;LOD;LOQ;Sensibilite (en U/mL);CV % deg a 30%;CV % deg a 50%;CV % deg a 70%;')
+
+                # Calculer le nombre d'échantillons
+                nb_echantillons = max(0, int((find_len_max-14)/4))
+
+                # Ajouter les colonnes pour chaque échantillon
+                for i in range(nb_echantillons):
+                    csv_out_compare_enzymo_to_ref.write('Activite Ech_' + str(i+1) + ' (U/mL);RSD Ech_' + str(i+1) + ' (%);')
+
+                # Ajouter les colonnes de différence
+                csv_out_compare_enzymo_to_ref.write('diff % LOD;diff % LOQ;diff % Sensibilite (en U/mL);diff % CV % deg a 30%;diff % CV % deg a 50%;diff % CV % deg a 70%;')
+
+                for i in range(nb_echantillons):
+                    csv_out_compare_enzymo_to_ref.write('diff % Activite Ech_' + str(i+1) + ' (U/mL);diff % RSD Ech_' + str(i+1) + ' (%);')
+
+                csv_out_compare_enzymo_to_ref.write('\n')
+
+                # Écrire les données
+                for i in range(len(all_results)):
+                    for j in range(len(all_results[i])):
+                        csv_out_compare_enzymo_to_ref.write(str(all_results[i][j]) + ';')
+                    csv_out_compare_enzymo_to_ref.write('\n')
+
+            print(f"Résultats écrits dans {csv_path}")
+        except Exception as e:
+            print(f"Erreur lors de l'écriture des résultats dans {csv_path}: {str(e)}")
+    else:
+        print("Aucun résultat à écrire dans le fichier CSV. Vérifiez que les répertoires de référence et de validation contiennent des données valides.")

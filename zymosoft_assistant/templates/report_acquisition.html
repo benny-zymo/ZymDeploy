@@ -9,16 +9,22 @@
             line-height: 1.6;
             color: #333333;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
         }
         h1, h2, h3 {
             color: #009967;
         }
+        .modern-header {
+            background-color: #009967;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #009967;
-            padding-bottom: 10px;
+            margin-bottom: 20px;
         }
         .section {
             margin-bottom: 20px;
@@ -54,20 +60,38 @@
         }
         .graph-container {
             text-align: center;
-            margin: 20px 0;
+            margin: 10px 0;
+            display: inline-block;
+            width: 48%;
+            vertical-align: top;
         }
         .graph-container img {
             max-width: 100%;
             height: auto;
         }
+        .graphs-grid {
+            text-align: center;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            font-style: italic;
+            color: #666;
+        }
     </style>
 </head>
 <body>
+    <div class="modern-header">
+        <!-- Emplacement pour un logo si nécessaire -->
+    </div>
+
     <div class="header">
         <h1>{{ title }}</h1>
         <p>Date: {{ date }}</p>
     </div>
-    
+
     <div class="section">
         <h2>Informations sur l'acquisition</h2>
         <table>
@@ -99,7 +123,7 @@
             </tr>
         </table>
     </div>
-    
+
     {% if statistics %}
     <div class="section">
         <h2>Statistiques</h2>
@@ -131,18 +155,167 @@
         </table>
     </div>
     {% endif %}
-    
+
+    {% if validation and validation.well_results_comparison %}
+    <div class="section">
+        <h2>Comparaison des résultats de puits</h2>
+        <table>
+            <tr>
+                <th>Activité</th>
+                <th>Area</th>
+                <th>Acquisition</th>
+                <th>Référence</th>
+                <th>Différence</th>
+                <th>Validité</th>
+            </tr>
+            {% for i in range(min(20, validation.well_results_comparison|length)) %}
+            {% set row = validation.well_results_comparison.iloc[i] %}
+            <tr>
+                <td>{{ row.get('activité', 0)|round(2) }}</td>
+                <td>{{ row.get('area', 0) }}</td>
+                <td>{{ row.get('acquisition', 0)|round(2) }}</td>
+                <td>{{ row.get('reference', 0)|round(2) }}</td>
+                <td>{{ row.get('CV', 0)|round(2) }}</td>
+                <td>{% if row.get('valid', False) %}✓{% else %}✗{% endif %}</td>
+            </tr>
+            {% endfor %}
+            {% if validation.well_results_comparison|length > 20 %}
+            <tr>
+                <td colspan="6">... {{ validation.well_results_comparison|length - 20 }} lignes supplémentaires non affichées</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        <h3>Statistiques de comparaison des puits</h3>
+        <table>
+            <tr>
+                <th>Statistique</th>
+                <th>Valeur</th>
+            </tr>
+            <tr>
+                <td>Différence moyenne</td>
+                <td>{{ validation.well_results_comparison['CV'].mean()|round(2) }}</td>
+            </tr>
+            <tr>
+                <td>Écart-type</td>
+                <td>{{ validation.well_results_comparison['CV'].std()|round(2) }}</td>
+            </tr>
+            <tr>
+                <td>Taux de validation</td>
+                <td>{{ (validation.well_results_comparison['valid'].sum() / validation.well_results_comparison|length * 100)|round(2) }}% ({{ validation.well_results_comparison['valid'].sum() }}/{{ validation.well_results_comparison|length }})</td>
+            </tr>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if validation and validation.lod_loq_comparison %}
+    <div class="section">
+        <h2>Comparaison des LOD/LOQ</h2>
+        <table>
+            <tr>
+                <th>Area</th>
+                <th>LOD Acq</th>
+                <th>LOD Ref</th>
+                <th>Diff LOD</th>
+                <th>LOQ Acq</th>
+                <th>LOQ Ref</th>
+                <th>Diff LOQ</th>
+                <th>Validité</th>
+            </tr>
+            {% for i in range(validation.lod_loq_comparison|length) %}
+            {% set row = validation.lod_loq_comparison.iloc[i] %}
+            <tr>
+                <td>{{ row.get('Area', 0) }}</td>
+                <td>{{ row.get('LOD_Acq', 0)|round(4) }}</td>
+                <td>{{ row.get('LOD_Ref', 0)|round(4) }}</td>
+                <td>{{ row.get('Diff_LOD', 0)|round(4) }}</td>
+                <td>{{ row.get('LOQ_Acq', 0)|round(4) }}</td>
+                <td>{{ row.get('LOQ_Ref', 0)|round(4) }}</td>
+                <td>{{ row.get('Diff_LOQ', 0)|round(4) }}</td>
+                <td>{% if row.get('Lod_Valid', False) and row.get('Loq_Valid', False) %}✓{% else %}✗{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
     {% if graphs %}
     <div class="section">
         <h2>Graphiques</h2>
-        {% for graph in graphs %}
-        <div class="graph-container">
-            <img src="{{ graph }}" alt="Graphique d'analyse">
+        <div class="graphs-grid">
+            {% for i in range(0, graphs|length, 2) %}
+                <div class="graph-container">
+                    <img src="{{ graphs[i] }}" alt="Graphique d'analyse">
+                </div>
+                {% if i+1 < graphs|length %}
+                <div class="graph-container">
+                    <img src="{{ graphs[i+1] }}" alt="Graphique d'analyse">
+                </div>
+                {% endif %}
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
     {% endif %}
-    
+
+    {% if log_analysis %}
+    <div class="section">
+        <h2>Analyse des logs d'acquisition</h2>
+        <table>
+            <tr>
+                <th>Paramètre</th>
+                <th>Valeur</th>
+            </tr>
+            <tr>
+                <td>Type d'acquisition</td>
+                <td>{{ log_analysis.acquisition_type }}</td>
+            </tr>
+            <tr>
+                <td>Durée d'acquisition (minutes)</td>
+                <td>{{ log_analysis.acquisition_duration.duration_minutes|round(2) }}</td>
+            </tr>
+            <tr>
+                <td>Nombre total de puits</td>
+                <td>{{ log_analysis.total_wells }}</td>
+            </tr>
+            <tr>
+                <td>Nombre de drift fixes</td>
+                <td>{{ log_analysis.drift_fix_count }}</td>
+            </tr>
+            <tr>
+                <td>Nombre de max retry</td>
+                <td>{{ log_analysis.max_retry_count }}</td>
+            </tr>
+            {% if log_analysis.acquisition_type == "prior" %}
+            <tr>
+                <td>Nombre moyen de loops</td>
+                <td>{{ log_analysis.average_value|round(2) }}</td>
+            </tr>
+            <tr>
+                <td>Nombre total de mesures</td>
+                <td>{{ log_analysis.total_measurements }}</td>
+            </tr>
+            <tr>
+                <td>Mesures 'Done'</td>
+                <td>{{ log_analysis.done_measurements }}</td>
+            </tr>
+            <tr>
+                <td>Mesures 'Timeout'</td>
+                <td>{{ log_analysis.timeout_measurements }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td>Nombre moyen de moves</td>
+                <td>{{ log_analysis.average_value|round(2) }}</td>
+            </tr>
+            <tr>
+                <td>Nombre total de mesures</td>
+                <td>{{ log_analysis.total_measurements }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+    {% endif %}
+
     {% if errors %}
     <div class="section">
         <h2>Erreurs détectées</h2>
@@ -153,7 +326,7 @@
         </ul>
     </div>
     {% endif %}
-    
+
     {% if warnings %}
     <div class="section">
         <h2>Avertissements</h2>
@@ -164,7 +337,7 @@
         </ul>
     </div>
     {% endif %}
-    
+
     <div class="footer">
         <p>Rapport généré automatiquement par l'Assistant d'installation ZymoSoft</p>
     </div>
