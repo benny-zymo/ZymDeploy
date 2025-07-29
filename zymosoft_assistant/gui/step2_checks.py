@@ -310,19 +310,18 @@ class Step2Checks(StepFrame):
                 zymocube_ctrl_ini_results = self.config_checker.validate_zymocube_ctrl_ini()
                 time.sleep(0.5)  # Simuler un traitement
 
-                # Étape 5: Validation des fichiers (100%)
-                self._update_progress(80, "Validation des fichiers...")
-                files_results = self.file_validator.validate_required_files()
-                time.sleep(0.5)  # Simuler un traitement
+                # Suppression de la validation des fichiers requis (étape 5)
+                # files_results = self.file_validator.validate_required_files()
+                # time.sleep(0.5)  # Simuler un traitement
 
-                # Compilation des résultats
+                # Compilation des résultats (sans "files")
                 self.check_results = {
                     "installation_valid": structure_results.get("installation_valid", False),
                     "structure": structure_results,
                     "config_ini": config_ini_results,
                     "plate_config_ini": plate_config_ini_results,
-                    "zymocube_ctrl_ini": zymocube_ctrl_ini_results,
-                    "files": files_results
+                    "zymocube_ctrl_ini": zymocube_ctrl_ini_results
+                    # "files": files_results
                 }
 
                 # Mise à jour de l'interface dans le thread principal
@@ -500,29 +499,62 @@ class Step2Checks(StepFrame):
         title_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
         self.config_ini_layout.addWidget(title_label)
 
-        # Statut
+        # Statut global
         status_text = "✓ Valide" if config_ini_results.get("config_valid", False) else "✗ Non valide"
         status_color = COLOR_SCHEME['success'] if config_ini_results.get("config_valid", False) else COLOR_SCHEME['error']
-
         status_label = QLabel(status_text)
         status_label.setStyleSheet(f"color: {status_color}; font-weight: bold;")
         self.config_ini_layout.addWidget(status_label)
 
-        # Valeurs
-        if "values" in config_ini_results and config_ini_results["values"]:
-            values_group = QGroupBox("Valeurs")
-            values_layout = QVBoxLayout(values_group)
-            self.config_ini_layout.addWidget(values_group)
+        # Tableau détaillé des vérifications
+        table = QTableWidget()
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels(["Paramètre", "Valeur", "Statut"])
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.config_ini_layout.addWidget(table)
 
-            tree = QTreeWidget()
-            tree.setHeaderLabels(["Paramètre", "Valeur"])
-            tree.setColumnWidth(0, 200)
-            tree.setColumnWidth(1, 200)
-            values_layout.addWidget(tree)
+        # Liste des vérifications à afficher
+        checks = [
+            ("Application.ExpertMode", "ExpertMode"),
+            ("Application.ExportAcquisitionDetailResults", "ExportAcquisitionDetailResults"),
+            ("Hardware.Controller", "Controller"),
+            ("Interf.Worker", "Worker"),
+            ("Reflecto.Worker", "Worker")
+        ]
+        # Ajout dynamique des valeurs présentes
+        values = config_ini_results.get("values", {})
+        row = 0
+        for param, key in checks:
+            value = values.get(param, "")
+            # Détermination du statut
+            statut = "✓"
+            if "errors" in config_ini_results and any(param.split(".")[1] in e for e in config_ini_results["errors"]):
+                statut = "✗"
+            elif value == "":
+                statut = "✗"
+            table.insertRow(row)
+            table.setItem(row, 0, QTableWidgetItem(param))
+            table.setItem(row, 1, QTableWidgetItem(str(value)))
+            status_item = QTableWidgetItem(statut)
+            status_item.setTextAlignment(Qt.AlignCenter)
+            status_item.setForeground(Qt.green if statut == "✓" else Qt.red)
+            table.setItem(row, 2, status_item)
+            row += 1
 
-            for key, value in config_ini_results["values"].items():
-                item = QTreeWidgetItem([key, str(value)])
-                tree.addTopLevelItem(item)
+        # Affichage des erreurs spécifiques (autres que les paramètres ci-dessus)
+        if "errors" in config_ini_results:
+            for err in config_ini_results["errors"]:
+                if not any(k in err for _, k in checks):
+                    table.insertRow(row)
+                    table.setItem(row, 0, QTableWidgetItem("Erreur"))
+                    table.setItem(row, 1, QTableWidgetItem(err))
+                    status_item = QTableWidgetItem("✗")
+                    status_item.setTextAlignment(Qt.AlignCenter)
+                    status_item.setForeground(Qt.red)
+                    table.setItem(row, 2, status_item)
+                    row += 1
 
     def _display_plate_config_ini_results(self):
         """
@@ -535,29 +567,89 @@ class Step2Checks(StepFrame):
         title_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
         self.plate_config_ini_layout.addWidget(title_label)
 
-        # Statut
+        # Statut global
         status_text = "✓ Valide" if plate_config_ini_results.get("config_valid", False) else "✗ Non valide"
         status_color = COLOR_SCHEME['success'] if plate_config_ini_results.get("config_valid", False) else COLOR_SCHEME['error']
-
         status_label = QLabel(status_text)
         status_label.setStyleSheet(f"color: {status_color}; font-weight: bold;")
         self.plate_config_ini_layout.addWidget(status_label)
 
-        # Types de plaques
-        if "plate_types" in plate_config_ini_results and plate_config_ini_results["plate_types"]:
-            plate_types_group = QGroupBox("Types de plaques")
-            plate_types_layout = QVBoxLayout(plate_types_group)
-            self.plate_config_ini_layout.addWidget(plate_types_group)
+        # Tableau détaillé des vérifications
+        table = QTableWidget()
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels(["Type/Paramètre", "Valeur", "Statut"])
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.plate_config_ini_layout.addWidget(table)
 
-            tree = QTreeWidget()
-            tree.setHeaderLabels(["Type de plaque", "Configuration"])
-            tree.setColumnWidth(0, 200)
-            tree.setColumnWidth(1, 200)
-            plate_types_layout.addWidget(tree)
+        row = 0
+        # Affichage des types de plaques
+        plate_types = plate_config_ini_results.get("plate_types", [])
+        for pt in plate_types:
+            table.insertRow(row)
+            table.setItem(row, 0, QTableWidgetItem(f"Type de plaque"))
+            table.setItem(row, 1, QTableWidgetItem(f"{pt.get('name','')} ({pt.get('config','')})"))
+            status_item = QTableWidgetItem("✓")
+            status_item.setTextAlignment(Qt.AlignCenter)
+            status_item.setForeground(Qt.green)
+            table.setItem(row, 2, status_item)
+            row += 1
 
-            for plate_type in plate_config_ini_results["plate_types"]:
-                item = QTreeWidgetItem([plate_type.get("name", ""), plate_type.get("config", "")])
-                tree.addTopLevelItem(item)
+        # Affichage des configs de plaques
+        configs = plate_config_ini_results.get("configs", {})
+        for config_name, config in configs.items():
+            # InterfParams
+            if config.get("interf_params"):
+                table.insertRow(row)
+                table.setItem(row, 0, QTableWidgetItem(f"{config_name}.InterfParams"))
+                table.setItem(row, 1, QTableWidgetItem(config["interf_params"]))
+                statut = "✓"
+                if "errors" in plate_config_ini_results and any(config["interf_params"] in e for e in plate_config_ini_results["errors"]):
+                    statut = "✗"
+                status_item = QTableWidgetItem(statut)
+                status_item.setTextAlignment(Qt.AlignCenter)
+                status_item.setForeground(Qt.green if statut == "✓" else Qt.red)
+                table.setItem(row, 2, status_item)
+                row += 1
+            # ReflectoParams
+            if config.get("reflecto_params"):
+                table.insertRow(row)
+                table.setItem(row, 0, QTableWidgetItem(f"{config_name}.ReflectoParams"))
+                table.setItem(row, 1, QTableWidgetItem(config["reflecto_params"]))
+                statut = "✓"
+                if "errors" in plate_config_ini_results and any(config["reflecto_params"] in e for e in plate_config_ini_results["errors"]):
+                    statut = "✗"
+                status_item = QTableWidgetItem(statut)
+                status_item.setTextAlignment(Qt.AlignCenter)
+                status_item.setForeground(Qt.green if statut == "✓" else Qt.red)
+                table.setItem(row, 2, status_item)
+                row += 1
+            # Fichiers de température
+            for temp in config.get("temperature_files", []):
+                table.insertRow(row)
+                table.setItem(row, 0, QTableWidgetItem(f"{config_name}.{temp['key']}"))
+                table.setItem(row, 1, QTableWidgetItem(temp['file']))
+                statut = "✓"
+                if "errors" in plate_config_ini_results and any(temp['file'] in e for e in plate_config_ini_results["errors"]):
+                    statut = "✗"
+                status_item = QTableWidgetItem(statut)
+                status_item.setTextAlignment(Qt.AlignCenter)
+                status_item.setForeground(Qt.green if statut == "✓" else Qt.red)
+                table.setItem(row, 2, status_item)
+                row += 1
+
+        # Affichage des erreurs spécifiques
+        if "errors" in plate_config_ini_results:
+            for err in plate_config_ini_results["errors"]:
+                table.insertRow(row)
+                table.setItem(row, 0, QTableWidgetItem("Erreur"))
+                table.setItem(row, 1, QTableWidgetItem(err))
+                status_item = QTableWidgetItem("✗")
+                status_item.setTextAlignment(Qt.AlignCenter)
+                status_item.setForeground(Qt.red)
+                table.setItem(row, 2, status_item)
+                row += 1
 
     def _display_zymocube_ctrl_ini_results(self):
         """
@@ -570,29 +662,61 @@ class Step2Checks(StepFrame):
         title_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
         self.zymocube_ctrl_ini_layout.addWidget(title_label)
 
-        # Statut
+        # Statut global
         status_text = "✓ Valide" if zymocube_ctrl_ini_results.get("config_valid", False) else "✗ Non valide"
         status_color = COLOR_SCHEME['success'] if zymocube_ctrl_ini_results.get("config_valid", False) else COLOR_SCHEME['error']
-
         status_label = QLabel(status_text)
         status_label.setStyleSheet(f"color: {status_color}; font-weight: bold;")
         self.zymocube_ctrl_ini_layout.addWidget(status_label)
 
-        # Valeurs
-        if "values" in zymocube_ctrl_ini_results and zymocube_ctrl_ini_results["values"]:
-            values_group = QGroupBox("Valeurs")
-            values_layout = QVBoxLayout(values_group)
-            self.zymocube_ctrl_ini_layout.addWidget(values_group)
+        # Tableau détaillé des vérifications
+        table = QTableWidget()
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels(["Paramètre", "Valeur", "Statut"])
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.zymocube_ctrl_ini_layout.addWidget(table)
 
-            tree = QTreeWidget()
-            tree.setHeaderLabels(["Paramètre", "Valeur"])
-            tree.setColumnWidth(0, 200)
-            tree.setColumnWidth(1, 200)
-            values_layout.addWidget(tree)
+        row = 0
+        # Paramètres principaux
+        values = zymocube_ctrl_ini_results.get("values", {})
+        for param, value in values.items():
+            table.insertRow(row)
+            table.setItem(row, 0, QTableWidgetItem(param))
+            table.setItem(row, 1, QTableWidgetItem(str(value)))
+            statut = "✓"
+            if "errors" in zymocube_ctrl_ini_results and any(param in e for e in zymocube_ctrl_ini_results["errors"]):
+                statut = "✗"
+            status_item = QTableWidgetItem(statut)
+            status_item.setTextAlignment(Qt.AlignCenter)
+            status_item.setForeground(Qt.green if statut == "✓" else Qt.red)
+            table.setItem(row, 2, status_item)
+            row += 1
 
-            for key, value in zymocube_ctrl_ini_results["values"].items():
-                item = QTreeWidgetItem([key, str(value)])
-                tree.addTopLevelItem(item)
+        # Types de plaques
+        plate_types = zymocube_ctrl_ini_results.get("plate_types", [])
+        for pt in plate_types:
+            table.insertRow(row)
+            table.setItem(row, 0, QTableWidgetItem("PlateType"))
+            table.setItem(row, 1, QTableWidgetItem(pt))
+            status_item = QTableWidgetItem("✓")
+            status_item.setTextAlignment(Qt.AlignCenter)
+            status_item.setForeground(Qt.green)
+            table.setItem(row, 2, status_item)
+            row += 1
+
+        # Affichage des erreurs spécifiques
+        if "errors" in zymocube_ctrl_ini_results:
+            for err in zymocube_ctrl_ini_results["errors"]:
+                table.insertRow(row)
+                table.setItem(row, 0, QTableWidgetItem("Erreur"))
+                table.setItem(row, 1, QTableWidgetItem(err))
+                status_item = QTableWidgetItem("✗")
+                status_item.setTextAlignment(Qt.AlignCenter)
+                status_item.setForeground(Qt.red)
+                table.setItem(row, 2, status_item)
+                row += 1
 
     def _display_summary_results(self):
         """
@@ -612,13 +736,76 @@ class Step2Checks(StepFrame):
         table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.summary_layout.addWidget(table)
 
-        # Ajouter les résultats au tableau
+        # Construction des détails pour chaque catégorie
+        def build_details(result, keys_to_check=None, value_keys=None):
+            details = []
+            # Ajout des erreurs
+            if isinstance(result, dict):
+                if "errors" in result and result["errors"]:
+                    details.extend([f"Erreur: {e}" for e in result["errors"]])
+                # Ajout des warnings
+                if "warnings" in result and result["warnings"]:
+                    details.extend([f"Avertissement: {w}" for w in result["warnings"]])
+                # Ajout des éléments validés
+                if keys_to_check:
+                    for k in keys_to_check:
+                        if k in result:
+                            val = result[k]
+                            if isinstance(val, bool):
+                                details.append(f"{k.replace('_', ' ')}: {'OK' if val else 'Non'}")
+                if value_keys:
+                    for k in value_keys:
+                        if k in result.get("values", {}):
+                            v = result["values"][k]
+                            details.append(f"{k}: {v}")
+            return "\n".join(details)
+
+        # Détails pour la structure
+        structure = self.check_results.get("structure", {})
+        structure_details = build_details(
+            structure,
+            keys_to_check=[
+                "bin_exists", "etc_exists", "resultats_exists",
+                "zymocubectrl_exists", "zymosoft_exists", "workers_exists", "version_match"
+            ]
+        )
+
+        # Détails pour Config.ini
+        config_ini = self.check_results.get("config_ini", {})
+        config_ini_details = build_details(
+            config_ini,
+            value_keys=list(config_ini.get("values", {}).keys()) if "values" in config_ini else []
+        )
+
+        # Détails pour PlateConfig.ini
+        plate_config_ini = self.check_results.get("plate_config_ini", {})
+        plate_config_ini_details = build_details(
+            plate_config_ini
+        )
+        # Ajout des types de plaques et configs invalides
+        if "errors" in plate_config_ini and plate_config_ini["errors"]:
+            for err in plate_config_ini["errors"]:
+                plate_config_ini_details += f"\n{err}"
+        if "plate_types" in plate_config_ini and plate_config_ini["plate_types"]:
+            for pt in plate_config_ini["plate_types"]:
+                plate_config_ini_details += f"\nType: {pt.get('name','')} Config: {pt.get('config','')}"
+
+        # Détails pour ZymoCubeCtrl.ini
+        zymocube_ctrl_ini = self.check_results.get("zymocube_ctrl_ini", {})
+        zymocube_ctrl_ini_details = build_details(
+            zymocube_ctrl_ini,
+            value_keys=list(zymocube_ctrl_ini.get("values", {}).keys()) if "values" in zymocube_ctrl_ini else []
+        )
+        if "plate_types" in zymocube_ctrl_ini and zymocube_ctrl_ini["plate_types"]:
+            zymocube_ctrl_ini_details += "\nTypes de plaques: " + ", ".join(zymocube_ctrl_ini["plate_types"])
+
+
+        # Ajouter les résultats au tableau (supprimer la ligne "Fichiers requis")
         categories = [
-            ("Structure d'installation", self.check_results.get("structure", {}).get("installation_valid", False)),
-            ("Config.ini", self.check_results.get("config_ini", {}).get("valid", False)),
-            ("PlateConfig.ini", self.check_results.get("plate_config_ini", {}).get("valid", False)),
-            ("ZymoCubeCtrl.ini", self.check_results.get("zymocube_ctrl_ini", {}).get("valid", False)),
-            ("Fichiers requis", self.check_results.get("files", {}).get("all_files_valid", False))
+            ("Structure d'installation", structure.get("installation_valid", False), structure_details),
+            ("Config.ini", config_ini.get("config_valid", False), config_ini_details),
+            ("PlateConfig.ini", plate_config_ini.get("config_valid", False), plate_config_ini_details),
+            ("ZymoCubeCtrl.ini", zymocube_ctrl_ini.get("config_valid", False), zymocube_ctrl_ini_details),
         ]
 
         # Compter les erreurs et avertissements
@@ -638,7 +825,7 @@ class Step2Checks(StepFrame):
         table.setRowCount(len(categories))
 
         # Remplir le tableau
-        for i, (category, is_valid, *details) in enumerate(categories):
+        for i, (category, is_valid, details_text) in enumerate(categories):
             # Catégorie
             category_item = QTableWidgetItem(category)
             table.setItem(i, 0, category_item)
@@ -654,8 +841,8 @@ class Step2Checks(StepFrame):
             table.setItem(i, 1, status_item)
 
             # Détails
-            details_text = details[0] if details else ""
             details_item = QTableWidgetItem(details_text)
+            details_item.setToolTip(details_text)
             table.setItem(i, 2, details_item)
 
         # Statut global

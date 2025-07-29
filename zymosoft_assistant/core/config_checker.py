@@ -187,10 +187,12 @@ class ConfigChecker:
                 results["values"][f"{section}.{key}"] = value
 
                 if value.lower() != expected_value.lower():
-                    results["warnings"].append(
+                    results["errors"].append(
                         f"Valeur incorrecte pour [{section}] {key}: "
                         f"'{value}' (attendu: '{expected_value}')"
                     )
+                    results["config_valid"] = False
+
             else:
                 if section in config:
                     results["errors"].append(f"Propriété '{key}' manquante dans [{section}]")

@@ -14,6 +14,8 @@ import shutil
 import datetime
 import pefile
 import sys
+import pandas as pd
+import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
@@ -122,6 +124,14 @@ def save_session_data(data: Dict[str, Any], filename: str = None) -> str:
         def default(self, obj):
             if isinstance(obj, datetime.datetime):
                 return obj.isoformat()
+            if isinstance(obj, pd.DataFrame):
+                return obj.to_dict(orient="records")
+            if isinstance(obj, (np.integer,)):
+                return int(obj)
+            if isinstance(obj, (np.floating,)):
+                return float(obj)
+            if isinstance(obj, (np.ndarray,)):
+                return obj.tolist()
             return super().default(obj)
 
     with open(file_path, 'w', encoding='utf-8') as f:
@@ -144,10 +154,34 @@ def load_session_data(file_path: str) -> Optional[Dict[str, Any]]:
         logger.error(f"Fichier de session non trouvé: {file_path}")
         return None
 
+    def convert_numpy_types(obj):
+        if isinstance(obj, list):
+            return [convert_numpy_types(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {k: convert_numpy_types(v) for k, v in obj.items()}
+        elif isinstance(obj, (np.integer,)):
+            return int(obj)
+        elif isinstance(obj, (np.floating,)):
+            return float(obj)
+        elif isinstance(obj, (np.ndarray,)):
+            return obj.tolist()
+        return obj
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as jde:
+                logger.error(f"Erreur de décodage JSON dans {file_path} : {jde}")
+                # Optionnel : log un extrait du fichier pour debug
+                with open(file_path, 'r', encoding='utf-8') as f2:
+                    lines = f2.readlines()
+                    error_line = jde.lineno - 1
+                    context = lines[max(0, error_line-2):error_line+3]
+                    logger.error("Contexte autour de l'erreur JSON :\n" + "".join(context))
+                return None
+        # Conversion récursive des types numpy si jamais il y en a dans le JSON
+        data = convert_numpy_types(data)
         logger.info(f"Données de session chargées depuis {file_path}")
         return data
     except Exception as e:
