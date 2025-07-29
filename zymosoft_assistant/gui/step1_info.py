@@ -187,6 +187,8 @@ class Step1Info(StepFrame):
         """)
         self.error_label.setWordWrap(True)
         self.error_label.hide()  # Caché par défaut
+        # Réserve l'espace pour éviter le compactage des champs lors de l'affichage du message d'erreur
+        self.error_label.setMinimumHeight(40)
         info_section.addWidget(self.error_label)
 
         self.layout.addLayout(info_section)
@@ -194,7 +196,8 @@ class Step1Info(StepFrame):
         # === ESPACE FLEXIBLE ===
         self.layout.addStretch(1)
 
-        # === CONNEXIONS DES SIGNAUX ===
+        # === CONNEXION
+        # S DES SIGNAUX ===
         # Validation en temps réel
         self.client_name_edit.textChanged.connect(self.validate)
         self.cs_responsible_edit.textChanged.connect(self.validate)

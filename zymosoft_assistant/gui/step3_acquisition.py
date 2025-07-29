@@ -1105,13 +1105,13 @@ class Step3Acquisition(StepFrame):
                 # Utiliser la fonction pour nanofilm
                 name_dossier, slope, intercept, r_value, nb_puits_loin_fit, diff_mean, diff_cv, vect1, vect2 = comparaison_ZC_to_ref_v1_nanofilm(
                     "SC", results_folder_norm, machine_to_validate, reference_folder_norm, reference_machine,
-                    validation_output_dir_norm, "validation_comparison", 10
+                    validation_output_dir_norm, "validation_comparison", 5
                 )
             else:
                 # Utiliser la fonction pour microdepot
                 name_dossier, slope, intercept, r_value, nb_puits_loin_fit, diff_mean, diff_cv, diam_diff_mean, diam_diff_cv, vect1, vect2 = comparaison_ZC_to_ref_v1(
                     "GP", results_folder_norm, machine_to_validate, reference_folder_norm, reference_machine,
-                    validation_output_dir_norm, "validation_comparison", 10
+                    validation_output_dir_norm, "validation_comparison", 5
                 )
 
             validation_results["comparison"] = {

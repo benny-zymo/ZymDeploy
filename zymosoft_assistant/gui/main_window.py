@@ -511,30 +511,26 @@ border: none;
             for i, indicator in enumerate(self.step_indicators):
                 indicator_container = indicator.parentWidget()
                 if i < index:
-                    # Étape validée (vert)
                     indicator_container.setProperty("status", "completed")
                     indicator.setProperty("status", "completed")
                 elif i == index:
-                    # Étape actuelle (primary)
                     indicator_container.setProperty("status", "current")
                     indicator.setProperty("status", "current")
                 elif not self.initial_load and not self.steps[i].validate():
-                    # Étape non valide (rouge)
                     indicator_container.setProperty("status", "invalid")
                     indicator.setProperty("status", "invalid")
                 else:
-                    # Étape non encore validée (gris)
                     indicator_container.setProperty("status", "pending")
                     indicator.setProperty("status", "pending")
 
-            if self.initial_load and index == 0:
-                self.initial_load = False
-
-                # Force le rafraîchissement du style
+                # Forcer le rafraîchissement du style pour chaque indicateur et son conteneur
                 indicator_container.style().unpolish(indicator_container)
                 indicator_container.style().polish(indicator_container)
                 indicator.style().unpolish(indicator)
                 indicator.style().polish(indicator)
+
+            if self.initial_load and index == 0:
+                self.initial_load = False
 
             # Mise à jour de la barre de progression
             progress_value = int((index / (len(self.steps) - 1)) * 100)
