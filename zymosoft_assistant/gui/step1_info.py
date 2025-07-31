@@ -248,8 +248,8 @@ class Step1Info(StepFrame):
                     self.instrumentation_responsible_edit.style().polish(self.instrumentation_responsible_edit)
 
             # Afficher le message d'erreur de manière plus lisible
-            self.error_label.setText("Veuillez remplir tous les champs obligatoires marqués en rouge.")
-            self.error_label.show()
+           # self.error_label.setText("Veuillez remplir tous les champs obligatoires marqués en rouge.")
+            #self.error_label.show()
             logger.warning(f"Validation de l'étape 1 échouée: {errors}")
             return False
 

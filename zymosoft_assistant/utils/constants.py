@@ -23,6 +23,7 @@ COLOR_SCHEME = {
     'primary_hover': '#007d54',
     'primary_pressed': '#006b47',
     'light_background' : '#f0f0f0',
+    'hightlight' : '#e0f7fa',
     'disabled' : '#cccccc',
     'background': 'white',
     'surface': '#ffffff',
@@ -40,8 +41,8 @@ COLOR_SCHEME = {
 APP_CONFIG = {
     'title': "ZymDeploy",
     'version': '1.0.0',
-    'window_width': 800,
-    'window_height': 600,
+    'window_width': 1200,
+    'window_height': 1000,
     'min_width': 640,
     'min_height': 480,
     'icon_path': None  # À définir si un icône est disponible
@@ -173,107 +174,7 @@ ZYMOCUBE_CTRL_INI_REQUIRED = {
     'PlateType': None  # Vérifié dynamiquement
 }
 
-# Types de plaques
-PLATE_TYPES = [
-    {
-        'id': 'micro_depot',
-        'name': "Micro dépôt",
-        'description': "Plaque pour micro dépôts"
-    },
-    {
-        'id': 'nanofilm',
-        'name': "Nanofilm",
-        'description': "Plaque pour nanofilms"
-    }
-]
 
-# Modes d'acquisition
-ACQUISITION_MODES = [
-    {
-        'id': 'client',
-        'name': "Client",
-        'description': "Mode client standard"
-    },
-    {
-        'id': 'expert',
-        'name': "Expert",
-        'description': "Mode expert avec options avancées"
-    }
-]
-
-# Actions de finalisation
-CLEANUP_ACTIONS = [
-    {
-        'id': 'client_mode',
-        'name': "Passer en mode client",
-        'description': "Modifier Config.ini pour définir ExpertMode=false",
-        'default': True
-    },
-    {
-        'id': 'clean_pc',
-        'name': "Nettoyer le PC",
-        'description': "Supprimer les données d'acquisitions de test et vider le dossier Diag/Temp",
-        'default': True
-    }
-]
-
-# Structure de l'installation ZymoSoft
-ZYMOSOFT_STRUCTURE = {
-    'bin': {
-        'required': True,
-        'files': [
-            {'name': 'ZymoCubeCtrl.exe', 'required': True},
-            {'name': 'ZymoSoft.exe', 'required': True},
-        ],
-        'dirs': [
-            {'name': 'workers', 'required': True}
-        ]
-    },
-    'etc': {
-        'required': True,
-        'dirs': [
-            {'name': 'Interf', 'required': True},
-            {'name': 'Reflecto', 'required': True}
-        ],
-        'files' : [ {'name': 'Config.ini', 'required': True},
-            {'name': 'PlateConfig.ini', 'required': True},
-            {'name': 'ZymoCubeCtrl.ini', 'required': True}]
-    },
-    'Resultats': {
-        'required': True
-    }
-}
-
-# Configuration requise dans Config.ini
-CONFIG_INI_REQUIRED = {
-    'Application': {
-        'ExpertMode': 'true',
-        'ExportAcquisitionDetailResults': 'true'
-    },
-    'Hardware': {
-        'Controller': 'ZymoCubeCtrl'
-    },
-    'Interf': {
-        'Worker': None,  # Vérifié dynamiquement
-        'MaxProcesses': None  # Optionnel
-    },
-    'Reflecto': {
-        'Worker': None,  # Vérifié dynamiquement
-        'MaxProcesses': None  # Optionnel
-    }
-}
-
-# Configuration requise dans ZymoCubeCtrl.ini
-ZYMOCUBE_CTRL_INI_REQUIRED = {
-    'Motors': {
-        'Port': None  # Vérifié dynamiquement
-    },
-    'Defaults': {
-        'VideoPreview': 'false',
-        'ImageDestDir': None  # Vérifié dynamiquement
-    },
-    'PlateType': None  # Vérifié dynamiquement
-}
 
 # Fichiers de température à vérifier dans PlateConfig.ini
 TEMPERATURE_FILES = [

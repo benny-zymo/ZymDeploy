@@ -95,7 +95,7 @@ def main():
         logger.info("Démarrage du ZymDeploy")
 
         # Configuration de l'icône de l'application
-        icon_path = resource_path("assets\\icons\\icon.ico")
+        icon_path = resource_path("assets\\icons\\icon.png")
         APP_CONFIG['icon_path'] = icon_path
         logger.info(f"Chemin de l'icône de l'application: {icon_path}")
 

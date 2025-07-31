@@ -251,6 +251,8 @@ def calculateAverageLoopsPrior(log_file_path: str, last_acquisition_line_number:
                 start_line = i
                 break
 
+
+
         for i, line in enumerate(lines):
             if i <= start_line:
                 continue
