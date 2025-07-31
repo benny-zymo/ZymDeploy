@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
                              QTableWidget, QTableWidgetItem, QHeaderView,
                              QCheckBox, QRadioButton, QGroupBox, QTextEdit,
                              QTreeWidget, QTreeWidgetItem, QButtonGroup, QDialog,
-                             QSplitter, QSizePolicy, QSpacerItem)
+                             QSplitter, QSizePolicy, QSpacerItem, QGridLayout)
 from PyQt5.QtCore import Qt, pyqtSignal, QVariant, pyqtSlot
 from PyQt5.QtGui import QPixmap, QFont
 
@@ -53,7 +53,7 @@ class SelectionBox(QPushButton):
                 border-radius: 8px;
                 padding: 15px;
                 background-color: white;
-                color: transparent;
+                color: black;
                 text-align: center;
                 font-weight: bold;
                 font-size: 11pt;

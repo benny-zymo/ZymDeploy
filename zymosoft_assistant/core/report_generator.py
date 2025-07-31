@@ -12,6 +12,8 @@ import json
 import datetime
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+
+import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
