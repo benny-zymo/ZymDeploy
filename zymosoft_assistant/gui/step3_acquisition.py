@@ -22,11 +22,11 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
                              QTableWidget, QTableWidgetItem, QHeaderView,
                              QCheckBox, QRadioButton, QGroupBox, QTextEdit,
                              QTreeWidget, QTreeWidgetItem, QButtonGroup, QDialog,
-                             QSplitter, QSizePolicy)
+                             QSplitter, QSizePolicy, QSpacerItem)
 from PyQt5.QtCore import Qt, pyqtSignal, QVariant, pyqtSlot
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QFont
 
-from zymosoft_assistant.utils.constants import COLOR_SCHEME, PLATE_TYPES, ACQUISITION_MODES
+from zymosoft_assistant.utils.constants import COLOR_SCHEME, PLATE_TYPES, ACQUISITION_MODES, VALIDATION_CRITERIA
 from zymosoft_assistant.core.acquisition_analyzer import AcquisitionAnalyzer
 from zymosoft_assistant.core.report_generator import ReportGenerator
 from zymosoft_assistant.scripts.Routine_VALIDATION_ZC_18022025 import compare_enzymo_2_ref, comparaison_ZC_to_ref_v1, \
@@ -53,12 +53,14 @@ class SelectionBox(QPushButton):
                 border-radius: 8px;
                 padding: 15px;
                 background-color: white;
+                color: transparent;
                 text-align: center;
                 font-weight: bold;
                 font-size: 11pt;
             }}
             QPushButton:hover {{
                 border-color: {COLOR_SCHEME.get('primary_hover', '#0056b3')};
+                color: {COLOR_SCHEME.get('primary_hover', '#0056b3')};
             }}
             QPushButton:checked {{
                 background-color: {COLOR_SCHEME.get('primary', '#007bff')};
@@ -69,6 +71,94 @@ class SelectionBox(QPushButton):
 
     def get_id(self):
         return self.option_id
+
+
+class ToggleSwitch(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setCheckable(True)
+        self.setMinimumWidth(60)
+        self.setMinimumHeight(30)
+        self.toggled.connect(self.update_style)
+        self.update_style(self.isChecked())
+
+    def update_style(self, checked):
+        if checked:
+            self.setText("ON")
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {COLOR_SCHEME.get('success', '#28a745')};
+                    color: white;
+                    border-radius: 15px;
+                    font-weight: bold;
+                }}
+            """)
+        else:
+            self.setText("OFF")
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {COLOR_SCHEME.get('secondary', '#6c757d')};
+                    color: white;
+                    border-radius: 15px;
+                    font-weight: bold;
+                }}
+            """)
+
+class FolderSelectionWidget(QFrame):
+    path_selected = pyqtSignal(str)
+
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        self.path = ""
+        layout = QVBoxLayout(self)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold;")
+        layout.addWidget(title_label)
+
+        self.path_label = QLabel("Aucun dossier sélectionné")
+        self.path_label.setStyleSheet(f"""
+            QLabel {{
+                padding: 15px;
+                border: 2px dashed {COLOR_SCHEME.get('border', '#ddd')};
+                border-radius: 8px;
+                background-color: {COLOR_SCHEME.get('background_light', '#f8f9fa')};
+                color: {COLOR_SCHEME.get('text_secondary', '#666')};
+                font-size: 11pt;
+            }}
+        """)
+        self.path_label.setAlignment(Qt.AlignCenter)
+        self.path_label.setMinimumHeight(80)
+        self.path_label.setWordWrap(True)
+        layout.addWidget(self.path_label)
+
+        self.browse_button = QPushButton("Parcourir...")
+        self.browse_button.clicked.connect(self.browse_folder)
+        layout.addWidget(self.browse_button, 0, Qt.AlignRight)
+
+    def browse_folder(self):
+        path = QFileDialog.getExistingDirectory(self, "Sélectionner un dossier", "/")
+        if path:
+            self.set_path(path)
+            self.path_selected.emit(path)
+
+    def set_path(self, path):
+        self.path = path
+        self.path_label.setText(path)
+        self.path_label.setStyleSheet(f"""
+            QLabel {{
+                padding: 15px;
+                border: 2px solid {COLOR_SCHEME.get('success', '#28a745')};
+                border-radius: 8px;
+                background-color: {COLOR_SCHEME.get('success_light', '#d4edda')};
+                color: {COLOR_SCHEME.get('success_dark', '#155724')};
+                font-size: 11pt;
+                font-weight: bold;
+            }}
+        """)
+
+    def get_path(self):
+        return self.path
 
 
 class VerticalTabWidget(QWidget):
@@ -274,10 +364,16 @@ class AcquisitionDetailsDialog(QDialog):
 
         splitter.setSizes([400, 600])
 
-        # Add a close button
+        # Add buttons
+        button_layout = QHBoxLayout()
+        self.report_button = QPushButton("Générer le rapport")
+        self.report_button.clicked.connect(self._generate_report)
+        button_layout.addWidget(self.report_button)
+        button_layout.addStretch()
         close_button = QPushButton("Fermer")
         close_button.clicked.connect(self.accept)
-        main_layout.addWidget(close_button, 0, Qt.AlignRight)
+        button_layout.addWidget(close_button)
+        main_layout.addLayout(button_layout)
 
     def populate_data(self):
         # This method will call display methods similar to Step3Acquisition
@@ -372,16 +468,62 @@ class AcquisitionDetailsDialog(QDialog):
         self.info_text.setText(info_text)
 
     def _display_statistics(self):
-        # Simplified display from main class
         self.stats_table.setRowCount(0)
+        self.stats_table.setColumnCount(3)
+        self.stats_table.setHorizontalHeaderLabels(["Paramètre", "Valeur", "Critère de référence"])
+        header = self.stats_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+
         analysis = self.acquisition_data.get('analysis', {})
         statistics = analysis.get("statistics", {})
         if statistics:
-            for key, value in statistics.items():
+            stats_items = [
+                ("Pente", f"{statistics.get('slope', 0):.4f}"),
+                ("Ordonnée à l'origine", f"{statistics.get('intercept', 0):.4f}"),
+                ("R²", f"{statistics.get('r2', 0):.4f}"),
+                ("Valeurs aberrantes", str(statistics.get('outliers_count', 0))),
+                ("% valeurs aberrantes", f"{statistics.get('outliers_percentage', 0):.2f}%")
+            ]
+            for param, value in stats_items:
                 row = self.stats_table.rowCount()
                 self.stats_table.insertRow(row)
-                self.stats_table.setItem(row, 0, QTableWidgetItem(str(key)))
-                self.stats_table.setItem(row, 1, QTableWidgetItem(str(value)))
+                self.stats_table.setItem(row, 0, QTableWidgetItem(param))
+                self.stats_table.setItem(row, 1, QTableWidgetItem(value))
+                self.stats_table.setItem(row, 2, QTableWidgetItem(""))
+
+        validation = analysis.get("validation", {})
+        if validation and 'comparison' in validation:
+            self._add_validation_statistics(validation)
+
+    def _add_validation_statistics(self, validation):
+        row = self.stats_table.rowCount()
+        self.stats_table.insertRow(row)
+        self.stats_table.setItem(row, 0, QTableWidgetItem("--- Résultats de validation ---"))
+
+        comp = validation['comparison']
+        comp_items = [
+            ("Pente (validation)", f"{comp.get('slope', 0):.4f}", 'slope'),
+            ("R² (validation)", f"{comp.get('r_value', 0):.4f}", 'r2'),
+        ]
+        for param, value, criteria_key in comp_items:
+            row = self.stats_table.rowCount()
+            self.stats_table.insertRow(row)
+            self.stats_table.setItem(row, 0, QTableWidgetItem(param))
+            value_item = QTableWidgetItem(value)
+            self.stats_table.setItem(row, 1, value_item)
+
+            criteria = VALIDATION_CRITERIA.get(criteria_key, {})
+            if criteria:
+                criteria_text = f"> {criteria['min']}" if criteria_key == 'r2' else f"{criteria['min']} - {criteria['max']}"
+                self.stats_table.setItem(row, 2, QTableWidgetItem(criteria_text))
+                try:
+                    val = float(value.split(' ')[0])
+                    is_valid = (val >= criteria['min'] and val <= criteria['max']) if criteria_key != 'r2' else (val >= criteria['min'])
+                    value_item.setBackground(Qt.green if is_valid else Qt.red)
+                except (ValueError, TypeError):
+                    pass
 
     def _display_well_results_comparison(self):
         # This is a simplified display logic
@@ -464,6 +606,24 @@ class AcquisitionDetailsDialog(QDialog):
             self.current_image_index += 1
             self._display_current_image()
             self._update_image_navigation()
+
+    def _generate_report(self):
+        try:
+            report_generator = ReportGenerator()
+
+            # Prepare data for the report, including the validation status
+            report_data = {
+                'analysis': self.acquisition_data.get('analysis', {}),
+                'comments': self.acquisition_data.get('comments', ''),
+                'validated': self.acquisition_data.get('validated', False)
+            }
+
+            report_path = report_generator.generate_acquisition_report(report_data)
+            QMessageBox.information(self, "Rapport Généré", f"Le rapport a été généré avec succès:\n{report_path}")
+            os.startfile(report_path)
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération du rapport depuis le modal: {str(e)}", exc_info=True)
+            QMessageBox.critical(self, "Erreur", f"Une erreur est survenue lors de la génération du rapport:\n{str(e)}")
 
 
 class Step3Acquisition(StepFrame):
@@ -719,10 +879,12 @@ class Step3Acquisition(StepFrame):
         nav_layout.addWidget(self.invalidate_button)
 
         # Bouton de rapport
-        self.report_button = QPushButton("Générer rapport d'acquisition")
-        self.report_button.clicked.connect(self._generate_acquisition_report)
-        self.report_button.setVisible(False)
-        nav_layout.addWidget(self.report_button)
+        # The report button is removed from here to avoid confusion.
+        # Report is now generated automatically on finalization or from the details modal.
+        # self.report_button = QPushButton("Générer rapport d'acquisition")
+        # self.report_button.clicked.connect(self._generate_acquisition_report)
+        # self.report_button.setVisible(False)
+        # nav_layout.addWidget(self.report_button)
 
         nav_layout.addStretch(1)
 
@@ -793,89 +955,45 @@ class Step3Acquisition(StepFrame):
 
     def _create_selection_widgets(self):
         """
-        Crée les widgets pour la sélection des résultats
+        Crée les widgets pour la sélection des résultats, avec un design amélioré.
         """
         # Description
-        description_label = QLabel(
-            "Sélectionnez les dossiers contenant les résultats de l'acquisition et de référence.")
+        description_label = QLabel("Sélectionnez les dossiers contenant les résultats de l'acquisition et (optionnellement) de référence.")
         description_label.setWordWrap(True)
-        description_label.setMinimumWidth(600)
         self.selection_layout.addWidget(description_label)
-        self.selection_layout.addSpacing(20)
-
-        # Sélection du dossier de résultats
-        folder_frame = QFrame()
-        folder_layout = QHBoxLayout(folder_frame)
-        folder_layout.setContentsMargins(20, 0, 20, 0)
-        self.selection_layout.addWidget(folder_frame)
         self.selection_layout.addSpacing(10)
 
-        folder_label = QLabel("Dossier de résultats :")
-        folder_label.setMinimumWidth(150)
-        folder_layout.addWidget(folder_label)
+        # Layout pour les sélecteurs de dossier
+        folder_selection_layout = QHBoxLayout()
+        self.results_folder_widget = FolderSelectionWidget("Dossier de résultats d'acquisition")
+        self.results_folder_widget.path_selected.connect(self._on_results_folder_selected)
+        folder_selection_layout.addWidget(self.results_folder_widget)
 
-        self.folder_entry = QLineEdit()
-        self.folder_entry.setText(self.results_folder_var)
-        self.folder_entry.setMinimumWidth(300)
-        self.folder_entry.textChanged.connect(self._on_folder_entry_changed)
-        folder_layout.addWidget(self.folder_entry)
-
-        browse_button = QPushButton("Parcourir...")
-        browse_button.clicked.connect(self._browse_results_folder)
-        folder_layout.addWidget(browse_button)
-
-        # Informations sur le dossier
-        self.folder_info_label = QLabel("")
-        self.folder_info_label.setWordWrap(True)
-        self.folder_info_label.setStyleSheet(f"color: {COLOR_SCHEME['text_secondary']};")
-        self.selection_layout.addWidget(self.folder_info_label)
-        self.selection_layout.addSpacing(10)
-
-        # Sélection du dossier de référence
-        ref_folder_frame = QFrame()
-        ref_folder_layout = QHBoxLayout(ref_folder_frame)
-        ref_folder_layout.setContentsMargins(20, 0, 20, 0)
-        self.selection_layout.addWidget(ref_folder_frame)
-        self.selection_layout.addSpacing(10)
-
-        ref_folder_label = QLabel("Dossier de référence :")
-        ref_folder_label.setMinimumWidth(150)
-        ref_folder_layout.addWidget(ref_folder_label)
-
-        self.ref_folder_entry = QLineEdit()
-        self.ref_folder_entry.setText(self.reference_folder_var)
-        self.ref_folder_entry.setMinimumWidth(300)
-        self.ref_folder_entry.textChanged.connect(self._on_ref_folder_entry_changed)
-        ref_folder_layout.addWidget(self.ref_folder_entry)
-
-        ref_browse_button = QPushButton("Parcourir...")
-        ref_browse_button.clicked.connect(self._browse_reference_folder)
-        ref_folder_layout.addWidget(ref_browse_button)
-
-        # Informations sur le dossier de référence
-        self.ref_folder_info_label = QLabel("")
-        self.ref_folder_info_label.setWordWrap(True)
-        self.ref_folder_info_label.setStyleSheet(f"color: {COLOR_SCHEME['text_secondary']};")
-        self.selection_layout.addWidget(self.ref_folder_info_label)
-        self.selection_layout.addSpacing(10)
+        self.reference_folder_widget = FolderSelectionWidget("Dossier de référence (optionnel)")
+        self.reference_folder_widget.path_selected.connect(self._on_reference_folder_selected)
+        folder_selection_layout.addWidget(self.reference_folder_widget)
+        self.selection_layout.addLayout(folder_selection_layout)
 
         # Options de validation
         validation_frame = QGroupBox("Options de validation")
-        validation_layout = QVBoxLayout(validation_frame)
+        validation_layout = QGridLayout(validation_frame)
         self.selection_layout.addWidget(validation_frame)
-        self.selection_layout.addSpacing(10)
 
-        # Checkbox pour do_compare_to_ref
-        self.compare_to_ref_checkbox = QCheckBox("Comparer aux références (mode expert)")
-        self.compare_to_ref_checkbox.setChecked(self.do_compare_to_ref)
-        self.compare_to_ref_checkbox.toggled.connect(self._on_compare_to_ref_toggled)
-        validation_layout.addWidget(self.compare_to_ref_checkbox)
+        # Option 1
+        validation_layout.addWidget(QLabel("Comparer aux références (mode expert)"), 0, 0)
+        self.compare_to_ref_switch = ToggleSwitch()
+        self.compare_to_ref_switch.setChecked(self.do_compare_to_ref)
+        self.compare_to_ref_switch.toggled.connect(self._on_compare_to_ref_toggled)
+        validation_layout.addWidget(self.compare_to_ref_switch, 0, 1, Qt.AlignLeft)
 
-        # Checkbox pour do_compare_enzymo_to_ref
-        self.compare_enzymo_to_ref_checkbox = QCheckBox("Comparer les données enzymatiques aux références")
-        self.compare_enzymo_to_ref_checkbox.setChecked(self.do_compare_enzymo_to_ref)
-        self.compare_enzymo_to_ref_checkbox.toggled.connect(self._on_compare_enzymo_to_ref_toggled)
-        validation_layout.addWidget(self.compare_enzymo_to_ref_checkbox)
+        # Option 2
+        validation_layout.addWidget(QLabel("Comparer les données enzymatiques aux références"), 1, 0)
+        self.compare_enzymo_to_ref_switch = ToggleSwitch()
+        self.compare_enzymo_to_ref_switch.setChecked(self.do_compare_enzymo_to_ref)
+        self.compare_enzymo_to_ref_switch.toggled.connect(self._on_compare_enzymo_to_ref_toggled)
+        validation_layout.addWidget(self.compare_enzymo_to_ref_switch, 1, 1, Qt.AlignLeft)
+
+        self.selection_layout.addStretch(1)
 
         # Barre de progression
         progress_frame = QFrame()
@@ -2648,7 +2766,9 @@ class Step3Acquisition(StepFrame):
         """
         try:
             if self.substep_indicator_label and index < len(self.substep_titles):
-                self.substep_indicator_label.setText(f"Étape {index + 1}/{len(self.substep_titles)}: {self.substep_titles[index]}")
+                # Simplifier le titre pour ne montrer que le nom de l'étape
+                title = self.substep_titles[index].split('. ')[-1]
+                self.substep_indicator_label.setText(title)
             self._update_nav_buttons()
         except Exception as e:
             logger.error(f"Erreur dans _on_substep_changed: {str(e)}", exc_info=True)
@@ -2691,8 +2811,9 @@ class Step3Acquisition(StepFrame):
                 self.validate_continue_button.setVisible(is_analysis_page)
             if self.invalidate_button:
                 self.invalidate_button.setVisible(is_analysis_page)
-            if self.report_button:
-                self.report_button.setVisible(is_analysis_page)
+            # The main report button is no longer used here.
+            # if self.report_button:
+            #     self.report_button.setVisible(is_analysis_page)
 
             # Gestion du bouton suivant
             if not self.next_substep_button:
@@ -2817,8 +2938,8 @@ class Step3Acquisition(StepFrame):
             self._update_history()
             self.save_data()
 
-            if validated:
-                self._generate_acquisition_report()
+            # Generate the report automatically upon finalizing, with the correct status
+            self._generate_acquisition_report(validated)
 
             if continue_acquisitions:
                 self._reset_acquisition()
@@ -2922,9 +3043,9 @@ class Step3Acquisition(StepFrame):
         except Exception as e:
             logger.error(f"Erreur dans _update_history: {str(e)}", exc_info=True)
 
-    def _generate_acquisition_report(self):
+    def _generate_acquisition_report(self, validated_status):
         """
-        Génère un rapport PDF pour l'acquisition actuelle
+        Génère un rapport PDF pour l'acquisition actuelle, en utilisant le statut de validation fourni.
         """
         try:
             if not self.analysis_results:
@@ -2932,13 +3053,15 @@ class Step3Acquisition(StepFrame):
                 return
 
             report_generator = ReportGenerator()
-            analysis_results = dict(self.analysis_results)
 
-            # Ajouter les commentaires
-            comments = self.comments_var if hasattr(self, 'comments_var') else ""
-            analysis_results["comments"] = comments
+            # Construire le dictionnaire de données pour le rapport
+            report_data = {
+                'analysis': self.analysis_results,
+                'comments': self.comments_var,
+                'validated': validated_status
+            }
 
-            report_path = report_generator.generate_acquisition_report(analysis_results)
+            report_path = report_generator.generate_acquisition_report(report_data)
             QMessageBox.information(self.widget, "Rapport",
                                     f"Le rapport d'acquisition a été généré avec succès:\n{report_path}")
 
