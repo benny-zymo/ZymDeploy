@@ -538,6 +538,10 @@ border: none;
             self.progress_bar.setValue(progress_value)
 
             # Mise à jour des boutons de navigation
+            is_step3 = index == 2
+            self.prev_button.setVisible(not is_step3)
+            self.next_button.setVisible(not is_step3)
+
             logger.debug(f"Mise à jour des boutons de navigation (prev_button enabled: {index > 0})")
             self.prev_button.setEnabled(index > 0)
 

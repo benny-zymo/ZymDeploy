@@ -1300,39 +1300,13 @@ class Step3Acquisition(StepFrame):
             self.acquisition_mode_var = box.get_id()
             logger.info(f"Mode d'acquisition sélectionné: {self.acquisition_mode_var}")
 
-    def _on_folder_entry_changed(self, text):
-        """
-        Appelé lorsque le texte du champ de dossier est modifié
-        """
-        try:
-            self.results_folder_var = text
-            if text:
-                self._check_results_folder(text)
-            else:
-                if self.folder_info_label:
-                    self.folder_info_label.setText("")
-            self._update_nav_buttons()
-        except Exception as e:
-            logger.error(f"Erreur dans _on_folder_entry_changed: {str(e)}", exc_info=True)
-            if self.folder_info_label:
-                self.folder_info_label.setText(f"Erreur lors de la vérification du dossier: {str(e)}")
+    def _on_results_folder_selected(self, path):
+        self.results_folder_var = path
+        self._update_nav_buttons()
 
-    def _on_ref_folder_entry_changed(self, text):
-        """
-        Appelé lorsque le texte du champ de dossier de référence est modifié
-        """
-        try:
-            self.reference_folder_var = text
-            if text:
-                self._check_reference_folder(text)
-            else:
-                if self.ref_folder_info_label:
-                    self.ref_folder_info_label.setText("")
-            self._update_nav_buttons()
-        except Exception as e:
-            logger.error(f"Erreur dans _on_ref_folder_entry_changed: {str(e)}", exc_info=True)
-            if self.ref_folder_info_label:
-                self.ref_folder_info_label.setText(f"Erreur lors de la vérification du dossier: {str(e)}")
+    def _on_reference_folder_selected(self, path):
+        self.reference_folder_var = path
+        self._update_nav_buttons()
 
     def _on_compare_to_ref_toggled(self, checked):
         """
