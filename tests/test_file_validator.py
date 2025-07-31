@@ -68,8 +68,10 @@ class TestFileValidatorDirectoryStructure(unittest.TestCase):
         result = self.validator.validate_directory_structure()
 
         self.assertTrue(result["valid"])
-        self.assertIn("Sous-dossier etc/Interf/ non trouvé:", result["warnings"])
-        self.assertIn("Sous-dossier etc/Reflecto/ non trouvé:", result["warnings"])
+        expected_warning_interf = f"Sous-dossier etc/Interf/ non trouvé: {self.base_path}/etc/Interf"
+        expected_warning_reflecto = f"Sous-dossier etc/Reflecto/ non trouvé: {self.base_path}/etc/Reflecto"
+        self.assertIn(expected_warning_interf, result["warnings"])
+        self.assertIn(expected_warning_reflecto, result["warnings"])
         self.assertFalse(result["directories"]["etc_Interf"]["exists"])
         self.assertFalse(result["directories"]["etc_Reflecto"]["exists"])
 

@@ -9,4 +9,8 @@ dependencies = [
     "pandas>=2.3.0",
     "pyqt5>=5.15.11",
     "reportlab>=4.4.2",
+    "pefile>=2023.2.7",
 ]
+
+[tool.setuptools]
+packages = ["zymosoft_assistant"]

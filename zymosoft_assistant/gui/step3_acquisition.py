@@ -18,11 +18,11 @@ import uuid
 import pandas as pd
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
                              QPushButton, QFrame, QFileDialog, QMessageBox,
-                             QProgressBar, QTabWidget, QWidget, QScrollArea,
+                             QProgressBar, QStackedWidget, QWidget, QScrollArea,
                              QTableWidget, QTableWidgetItem, QHeaderView,
                              QCheckBox, QRadioButton, QGroupBox, QTextEdit,
                              QTreeWidget, QTreeWidgetItem, QButtonGroup, QDialog,
-                             QSplitter)
+                             QSplitter, QSizePolicy)
 from PyQt5.QtCore import Qt, pyqtSignal, QVariant, pyqtSlot
 from PyQt5.QtGui import QPixmap
 
@@ -36,6 +36,434 @@ from zymosoft_assistant.scripts.processAcquisitionLog import analyzeLogFile, gen
 from .step_frame import StepFrame
 
 logger = logging.getLogger(__name__)
+
+
+class SelectionBox(QPushButton):
+    """
+    A custom clickable box widget that acts like a radio button.
+    """
+    def __init__(self, text, option_id, parent=None):
+        super().__init__(text, parent)
+        self.setCheckable(True)
+        self.option_id = option_id
+        self.setMinimumHeight(60)
+        self.setStyleSheet(f"""
+            QPushButton {{
+                border: 2px solid {COLOR_SCHEME.get('border', '#ddd')};
+                border-radius: 8px;
+                padding: 15px;
+                background-color: white;
+                text-align: center;
+                font-weight: bold;
+                font-size: 11pt;
+            }}
+            QPushButton:hover {{
+                border-color: {COLOR_SCHEME.get('primary_hover', '#0056b3')};
+            }}
+            QPushButton:checked {{
+                background-color: {COLOR_SCHEME.get('primary', '#007bff')};
+                color: white;
+                border-color: {COLOR_SCHEME.get('primary_dark', '#0056b3')};
+            }}
+        """)
+
+    def get_id(self):
+        return self.option_id
+
+
+class VerticalTabWidget(QWidget):
+    """
+    Widget pour créer des tabs verticaux avec indicateur de statut
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.current_index = 0
+        self.tabs = []
+        self.tab_widgets = []
+        self.tab_buttons = []
+        self.setup_ui()
+
+    def setup_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Zone des boutons de tabs (à gauche)
+        self.tab_buttons_frame = QFrame()
+        self.tab_buttons_frame.setFixedWidth(200)
+        self.tab_buttons_frame.setStyleSheet(f"""
+            QFrame {{
+                background-color: {COLOR_SCHEME.get('background_light', '#f5f5f5')};
+                border-right: 1px solid {COLOR_SCHEME.get('border', '#ddd')};
+            }}
+        """)
+        self.tab_buttons_layout = QVBoxLayout(self.tab_buttons_frame)
+        self.tab_buttons_layout.setContentsMargins(5, 5, 5, 5)
+        self.tab_buttons_layout.setSpacing(2)
+
+        # Zone de contenu (à droite)
+        self.content_frame = QFrame()
+        self.content_layout = QVBoxLayout(self.content_frame)
+        self.content_layout.setContentsMargins(10, 10, 10, 10)
+
+        layout.addWidget(self.tab_buttons_frame)
+        layout.addWidget(self.content_frame, 1)
+
+    def add_tab(self, widget, title, status=None):
+        """
+        Ajoute une tab avec un statut (None, True pour vert, False pour rouge)
+        """
+        button = QPushButton(title)
+        button.setCheckable(True)
+        button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        button.setMinimumHeight(40)
+
+        # Utiliser une closure pour capturer l'index correct
+        tab_index = len(self.tabs)
+        button.clicked.connect(lambda checked, idx=tab_index: self.set_current_index(idx))
+
+        self.update_tab_style(button, status, len(self.tabs) == 0)
+
+        self.tab_buttons.append(button)
+        self.tabs.append(title)
+        self.tab_widgets.append(widget)
+
+        self.tab_buttons_layout.addWidget(button)
+
+        # Masquer le widget initialement sauf le premier
+        widget.setVisible(len(self.tabs) == 1)
+        self.content_layout.addWidget(widget)
+
+        if len(self.tabs) == 1:
+            button.setChecked(True)
+
+        return tab_index
+
+    def update_tab_style(self, button, status, is_current=False):
+        """
+        Met à jour le style du bouton selon le statut
+        """
+        base_style = """
+            QPushButton {
+                text-align: left;
+                padding: 8px 12px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                margin: 1px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #e8e8e8;
+            }
+        """
+
+        if status is True:  # Valide - vert
+            color_style = f"""
+                QPushButton {{
+                    background-color: {COLOR_SCHEME.get('success_light', '#d4edda')};
+                    border-left: 4px solid {COLOR_SCHEME.get('success', '#28a745')};
+                    color: {COLOR_SCHEME.get('success_dark', '#155724')};
+                }}
+                QPushButton:checked {{
+                    background-color: {COLOR_SCHEME.get('success', '#28a745')};
+                    color: white;
+                }}
+            """
+        elif status is False:  # Invalide - rouge
+            color_style = f"""
+                QPushButton {{
+                    background-color: {COLOR_SCHEME.get('error_light', '#f8d7da')};
+                    border-left: 4px solid {COLOR_SCHEME.get('error', '#dc3545')};
+                    color: {COLOR_SCHEME.get('error_dark', '#721c24')};
+                }}
+                QPushButton:checked {{
+                    background-color: {COLOR_SCHEME.get('error', '#dc3545')};
+                    color: white;
+                }}
+            """
+        else:  # Neutre - gris
+            color_style = f"""
+                QPushButton {{
+                    background-color: {COLOR_SCHEME.get('background', '#ffffff')};
+                    border-left: 4px solid {COLOR_SCHEME.get('border', '#ddd')};
+                    color: {COLOR_SCHEME.get('text', '#333')};
+                }}
+                QPushButton:checked {{
+                    background-color: {COLOR_SCHEME.get('primary', '#007bff')};
+                    color: white;
+                }}
+            """
+
+        button.setStyleSheet(base_style + color_style)
+
+    def set_current_index(self, index):
+        """
+        Change l'onglet actuel
+        """
+        if 0 <= index < len(self.tabs):
+            # Masquer l'onglet actuel
+            if 0 <= self.current_index < len(self.tab_widgets):
+                self.tab_widgets[self.current_index].setVisible(False)
+                if self.current_index < len(self.tab_buttons):
+                    self.tab_buttons[self.current_index].setChecked(False)
+
+            # Afficher le nouvel onglet
+            self.current_index = index
+            self.tab_widgets[index].setVisible(True)
+            self.tab_buttons[index].setChecked(True)
+
+    def update_tab_status(self, index, status):
+        """
+        Met à jour le statut d'une tab
+        """
+        if 0 <= index < len(self.tab_buttons):
+            self.update_tab_style(self.tab_buttons[index], status, index == self.current_index)
+
+
+class AcquisitionDetailsDialog(QDialog):
+    """
+    A dialog to show the detailed results of a past acquisition.
+    """
+    def __init__(self, acquisition_data, parent=None):
+        super().__init__(parent)
+        self.acquisition_data = acquisition_data
+        self.setWindowTitle(f"Détails de l'Acquisition #{acquisition_data['id']}")
+        self.setMinimumSize(1000, 700)
+
+        # Initialize widget references
+        self._initialize_widget_references()
+
+        # Setup UI
+        self.setup_ui()
+        self.populate_data()
+
+    def _initialize_widget_references(self):
+        self.info_stats_tabs = None
+        self.info_text = None
+        self.stats_table = None
+        self.well_results_table = None
+        self.lod_loq_table = None
+        self.log_analysis_table = None
+        self.graphs_widget = None
+        self.image_title_label = None
+        self.image_counter_label = None
+        self.prev_image_button = None
+        self.next_image_button = None
+        self.graph_images = []
+        self.graph_titles = []
+        self.current_image_index = 0
+
+    def setup_ui(self):
+        main_layout = QVBoxLayout(self)
+
+        # Create analysis widgets (reusing logic from Step3Acquisition)
+        splitter = QSplitter(Qt.Horizontal)
+        main_layout.addWidget(splitter)
+
+        left_panel = QWidget()
+        left_layout = QVBoxLayout(left_panel)
+        self.info_stats_tabs = VerticalTabWidget()
+        left_layout.addWidget(self.info_stats_tabs)
+        self._create_info_tabs()
+        splitter.addWidget(left_panel)
+
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        self._create_image_display_widgets(right_layout)
+        splitter.addWidget(right_panel)
+
+        splitter.setSizes([400, 600])
+
+        # Add a close button
+        close_button = QPushButton("Fermer")
+        close_button.clicked.connect(self.accept)
+        main_layout.addWidget(close_button, 0, Qt.AlignRight)
+
+    def populate_data(self):
+        # This method will call display methods similar to Step3Acquisition
+        self._display_acquisition_info()
+        self._display_statistics()
+        self._display_well_results_comparison()
+        self._display_lod_loq_comparison()
+        self._display_log_analysis()
+        self._display_graphs()
+        # No need to update tab colors here as it's a static view
+
+    # --- Copied and adapted methods from Step3Acquisition ---
+
+    def _create_info_tabs(self):
+        # This is a simplified version of _create_info_tabs from the main class
+        info_tab = QWidget()
+        info_layout = QVBoxLayout(info_tab)
+        self.info_text = QTextEdit()
+        self.info_text.setReadOnly(True)
+        info_layout.addWidget(self.info_text)
+        self.info_stats_tabs.add_tab(info_tab, "Informations")
+
+        stats_tab = QWidget()
+        stats_layout = QVBoxLayout(stats_tab)
+        self.stats_table = QTableWidget(0, 2)
+        self.stats_table.setHorizontalHeaderLabels(["Paramètre", "Valeur"])
+        stats_layout.addWidget(self.stats_table)
+        self.info_stats_tabs.add_tab(stats_tab, "Statistiques")
+
+        well_results_tab = QWidget()
+        well_results_layout = QVBoxLayout(well_results_tab)
+        self.well_results_table = QTableWidget(0, 6)
+        self.well_results_table.setHorizontalHeaderLabels(["Activité", "Area", "Acquisition", "Référence", "Diff", "Valide"])
+        well_results_layout.addWidget(self.well_results_table)
+        self.info_stats_tabs.add_tab(well_results_tab, "Comparaison WellResults")
+
+        lod_loq_tab = QWidget()
+        lod_loq_layout = QVBoxLayout(lod_loq_tab)
+        self.lod_loq_table = QTableWidget(0, 9)
+        self.lod_loq_table.setHorizontalHeaderLabels(["Area", "LOD_Ref", "LOD_Acq", "LOQ_Ref", "LOQ_Acq", "Diff LOD", "Diff LOQ", "Valide LOD", "Valide LOQ"])
+        lod_loq_layout.addWidget(self.lod_loq_table)
+        self.info_stats_tabs.add_tab(lod_loq_tab, "Comparaison LOD/LOQ")
+
+        log_analysis_tab = QWidget()
+        log_analysis_layout = QVBoxLayout(log_analysis_tab)
+        self.log_analysis_table = QTableWidget(0, 2)
+        self.log_analysis_table.setHorizontalHeaderLabels(["Paramètre", "Valeur"])
+        log_analysis_layout.addWidget(self.log_analysis_table)
+        self.info_stats_tabs.add_tab(log_analysis_tab, "Analyse des logs")
+
+    def _create_image_display_widgets(self, right_layout):
+        images_frame = QGroupBox("Images")
+        images_layout = QVBoxLayout(images_frame)
+        right_layout.addWidget(images_frame)
+
+        self.graphs_widget = QLabel()
+        self.graphs_widget.setAlignment(Qt.AlignCenter)
+        images_layout.addWidget(self.graphs_widget)
+
+        self.image_title_label = QLabel()
+        self.image_title_label.setAlignment(Qt.AlignCenter)
+        images_layout.addWidget(self.image_title_label)
+
+        nav_buttons_container = QWidget()
+        nav_buttons_layout = QHBoxLayout(nav_buttons_container)
+        images_layout.addWidget(nav_buttons_container)
+
+        self.prev_image_button = QPushButton("< Précédent")
+        self.prev_image_button.clicked.connect(self._show_previous_image)
+        nav_buttons_layout.addWidget(self.prev_image_button)
+
+        self.image_counter_label = QLabel("0/0")
+        self.image_counter_label.setAlignment(Qt.AlignCenter)
+        nav_buttons_layout.addWidget(self.image_counter_label)
+
+        self.next_image_button = QPushButton("Suivant >")
+        self.next_image_button.clicked.connect(self._show_next_image)
+        nav_buttons_layout.addWidget(self.next_image_button)
+
+    def _display_acquisition_info(self):
+        plate_type_name = next((pt['name'] for pt in PLATE_TYPES if pt['id'] == self.acquisition_data['plate_type']), "Inconnu")
+        mode_name = next((m['name'] for m in ACQUISITION_MODES if m['id'] == self.acquisition_data['mode']), "Inconnu")
+        info_text = (
+            f"ID: {self.acquisition_data['id']}\n"
+            f"Date: {self.acquisition_data['timestamp']}\n"
+            f"Type de plaque: {plate_type_name}\n"
+            f"Mode: {mode_name}\n"
+            f"Dossier: {self.acquisition_data['results_folder']}\n"
+            f"Statut: {'Validée' if self.acquisition_data['validated'] else 'Invalidée'}\n\n"
+            f"Commentaires: {self.acquisition_data['comments']}"
+        )
+        self.info_text.setText(info_text)
+
+    def _display_statistics(self):
+        # Simplified display from main class
+        self.stats_table.setRowCount(0)
+        analysis = self.acquisition_data.get('analysis', {})
+        statistics = analysis.get("statistics", {})
+        if statistics:
+            for key, value in statistics.items():
+                row = self.stats_table.rowCount()
+                self.stats_table.insertRow(row)
+                self.stats_table.setItem(row, 0, QTableWidgetItem(str(key)))
+                self.stats_table.setItem(row, 1, QTableWidgetItem(str(value)))
+
+    def _display_well_results_comparison(self):
+        # This is a simplified display logic
+        self.well_results_table.setRowCount(0)
+        validation = self.acquisition_data.get('analysis', {}).get("validation", {})
+        if "well_results_comparison" in validation:
+            df = validation["well_results_comparison"]
+            self.well_results_table.setRowCount(len(df))
+            for i, row in df.iterrows():
+                for j, col in enumerate(df.columns):
+                    self.well_results_table.setItem(i, j, QTableWidgetItem(str(row[col])))
+
+    def _display_lod_loq_comparison(self):
+        self.lod_loq_table.setRowCount(0)
+        validation = self.acquisition_data.get('analysis', {}).get("validation", {})
+        if "lod_loq_comparison" in validation:
+            df = validation["lod_loq_comparison"]
+            self.lod_loq_table.setRowCount(len(df))
+            for i, row in df.iterrows():
+                for j, col in enumerate(df.columns):
+                    self.lod_loq_table.setItem(i, j, QTableWidgetItem(str(row[col])))
+
+    def _display_log_analysis(self):
+        self.log_analysis_table.setRowCount(0)
+        log_analysis = self.acquisition_data.get('analysis', {}).get("log_analysis", {})
+        if log_analysis:
+            for key, value in log_analysis.items():
+                row = self.log_analysis_table.rowCount()
+                self.log_analysis_table.insertRow(row)
+                self.log_analysis_table.setItem(row, 0, QTableWidgetItem(str(key)))
+                self.log_analysis_table.setItem(row, 1, QTableWidgetItem(str(value)))
+
+    def _display_graphs(self):
+        analysis = self.acquisition_data.get('analysis', {})
+        graph_paths = analysis.get("graphs", [])
+
+        # Also look for graphs in the validation_results subfolder
+        validation_dir = os.path.join(self.acquisition_data['results_folder'], "validation_results")
+        if os.path.exists(validation_dir):
+            for file in os.listdir(validation_dir):
+                if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    graph_paths.append(os.path.join(validation_dir, file))
+
+        if not graph_paths:
+            self.graphs_widget.setText("Aucune image disponible")
+            return
+
+        for path in graph_paths:
+            if os.path.exists(path):
+                image = QPixmap(path)
+                if not image.isNull():
+                    self.graph_images.append(image)
+                    self.graph_titles.append(os.path.basename(path))
+
+        if self.graph_images:
+            self.current_image_index = 0
+            self._display_current_image()
+        self._update_image_navigation()
+
+    def _display_current_image(self):
+        if 0 <= self.current_image_index < len(self.graph_images):
+            image = self.graph_images[self.current_image_index]
+            self.graphs_widget.setPixmap(image.scaled(self.graphs_widget.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            self.image_title_label.setText(self.graph_titles[self.current_image_index])
+
+    def _update_image_navigation(self):
+        total = len(self.graph_images)
+        self.prev_image_button.setEnabled(self.current_image_index > 0)
+        self.next_image_button.setEnabled(self.current_image_index < total - 1)
+        self.image_counter_label.setText(f"{self.current_image_index + 1}/{total}")
+
+    def _show_previous_image(self):
+        if self.current_image_index > 0:
+            self.current_image_index -= 1
+            self._display_current_image()
+            self._update_image_navigation()
+
+    def _show_next_image(self):
+        if self.current_image_index < len(self.graph_images) - 1:
+            self.current_image_index += 1
+            self._display_current_image()
+            self._update_image_navigation()
 
 
 class Step3Acquisition(StepFrame):
@@ -111,6 +539,8 @@ class Step3Acquisition(StepFrame):
         """
         # Main components
         self.notebook = None
+        self.substep_indicator_label = None
+        self.substep_titles = []
         self.folder_info_var = ""
         self.progress_bar = None
         self.progress_label = None
@@ -166,6 +596,8 @@ class Step3Acquisition(StepFrame):
 
         # Tabs widget and indexes for coloring
         self.info_stats_tabs = None
+        self.info_tab_index = -1
+        self.stats_tab_index = -1
         self.well_results_tab_index = -1
         self.lod_loq_tab_index = -1
         self.log_analysis_tab_index = -1
@@ -182,27 +614,40 @@ class Step3Acquisition(StepFrame):
         main_layout = QVBoxLayout()
         self.layout.addLayout(main_layout)
 
-        # Utiliser un splitter pour permettre le redimensionnement entre le notebook et l'historique
+        # Utiliser un splitter pour permettre le redimensionnement entre la partie principale et l'historique
         main_splitter = QSplitter(Qt.Vertical)
         main_layout.addWidget(main_splitter)
 
-        # Notebook pour les sous-étapes
-        self.notebook = QTabWidget()
-        main_splitter.addWidget(self.notebook)
+        # --- Partie principale (en haut) ---
+        main_content_frame = QFrame()
+        main_content_layout = QVBoxLayout(main_content_frame)
+        main_content_layout.setContentsMargins(0, 0, 0, 0)
+        main_splitter.addWidget(main_content_frame)
 
-        # Create tabs
-        self._create_all_tabs()
+        # Indicateur de sous-étape
+        self.substep_indicator_label = QLabel("Étape 1/3: Configuration")
+        self.substep_indicator_label.setStyleSheet("font-size: 14pt; font-weight: bold; margin-bottom: 10px;")
+        self.substep_indicator_label.setAlignment(Qt.AlignCenter)
+        main_content_layout.addWidget(self.substep_indicator_label)
 
-        # Historique des acquisitions
+        # QStackedWidget pour les sous-étapes
+        self.notebook = QStackedWidget()
+        main_content_layout.addWidget(self.notebook)
+
+        # Créer les pages du QStackedWidget
+        self._create_all_pages()
+
+        # Historique des acquisitions (en bas)
         self.history_frame = QGroupBox("Historique des acquisitions")
         history_layout = QVBoxLayout(self.history_frame)
         main_splitter.addWidget(self.history_frame)
 
-        # Définir les tailles initiales des sections (3:1)
-        main_splitter.setSizes([300, 100])
+        # Définir les tailles initiales des sections (par exemple, 3:1)
+        main_splitter.setSizes([400, 150])
 
         self.history_tree = QTreeWidget()
         self.history_tree.setHeaderLabels(["#", "Type de plaque", "Mode", "Statut", "Date"])
+        self.history_tree.itemDoubleClicked.connect(self._show_acquisition_details_modal)
         self.history_tree.setColumnWidth(0, 50)
         self.history_tree.setColumnWidth(1, 150)
         self.history_tree.setColumnWidth(2, 150)
@@ -213,36 +658,39 @@ class Step3Acquisition(StepFrame):
         # Barre de navigation spécifique à l'étape 3
         self._create_navigation_bar(main_layout)
 
-        # Désactiver les onglets 2 et 3 au départ
-        self.notebook.setTabEnabled(1, False)
-        self.notebook.setTabEnabled(2, False)
-
         # Mise à jour de l'état des boutons de navigation
         self._update_nav_buttons()
 
         # Liaison des événements
-        self.notebook.currentChanged.connect(self._on_tab_changed)
+        self.notebook.currentChanged.connect(self._on_substep_changed)
 
-    def _create_all_tabs(self):
+
+    def _create_all_pages(self):
         """
-        Create all notebook tabs and ensure all widgets are properly initialized
+        Crée toutes les pages du QStackedWidget et initialise les titres.
         """
-        # Sous-étape 1: Configuration de l'acquisition
+        self.substep_titles = [
+            "1. Configuration",
+            "2. Sélection des résultats",
+            "3. Analyse des résultats"
+        ]
+
+        # Page 1: Configuration de l'acquisition
         self.config_frame = QWidget()
         self.config_layout = QVBoxLayout(self.config_frame)
-        self.notebook.addTab(self.config_frame, "1. Configuration")
+        self.notebook.addWidget(self.config_frame)
         self._create_config_widgets()
 
-        # Sous-étape 2: Sélection des résultats
+        # Page 2: Sélection des résultats
         self.selection_frame = QWidget()
         self.selection_layout = QVBoxLayout(self.selection_frame)
-        self.notebook.addTab(self.selection_frame, "2. Sélection des résultats")
+        self.notebook.addWidget(self.selection_frame)
         self._create_selection_widgets()
 
-        # Sous-étape 3: Analyse des résultats
+        # Page 3: Analyse des résultats
         self.analysis_frame = QWidget()
         self.analysis_layout = QVBoxLayout(self.analysis_frame)
-        self.notebook.addTab(self.analysis_frame, "3. Analyse des résultats")
+        self.notebook.addWidget(self.analysis_frame)
         self._create_analysis_widgets()
 
     def _create_navigation_bar(self, main_layout):
@@ -285,73 +733,63 @@ class Step3Acquisition(StepFrame):
 
     def _create_config_widgets(self):
         """
-        Crée les widgets pour la configuration de l'acquisition
+        Crée les widgets pour la configuration de l'acquisition avec un design amélioré.
         """
         # Description
-        description_label = QLabel("Configurez les paramètres de l'acquisition à réaliser.")
+        description_label = QLabel("Configurez les paramètres de l'acquisition à valider.")
         description_label.setWordWrap(True)
-        description_label.setMinimumWidth(600)
         self.config_layout.addWidget(description_label)
         self.config_layout.addSpacing(20)
 
-        # Utiliser un splitter pour permettre le redimensionnement
-        config_splitter = QSplitter(Qt.Vertical)
-        self.config_layout.addWidget(config_splitter)
-        self.config_layout.addStretch(1)
+        # Layout principal pour les boîtes de sélection
+        options_layout = QHBoxLayout()
+        options_layout.setSpacing(20)
+        self.config_layout.addLayout(options_layout)
 
-        # Type de plaque
-        plate_type_frame = QGroupBox("Type de plaque")
-        plate_type_layout = QVBoxLayout(plate_type_frame)
-
-        # Groupe de boutons radio pour le type de plaque
-        self.plate_type_group = QButtonGroup()
+        # --- Groupe 1: Type de plaque ---
+        plate_type_groupbox = QGroupBox("Type de plaque (Nano film ou Micro dépôt)")
+        plate_type_layout = QVBoxLayout(plate_type_groupbox)
+        self.plate_type_group = QButtonGroup(self)
+        self.plate_type_group.setExclusive(True)
 
         for plate_type in PLATE_TYPES:
-            rb = QRadioButton(plate_type['name'])
-            rb.setProperty("plate_type_id", plate_type['id'])
+            box = SelectionBox(plate_type['name'], plate_type['id'])
             if self.plate_type_var == plate_type['id']:
-                rb.setChecked(True)
-            rb.toggled.connect(self._on_plate_type_changed)
-            plate_type_layout.addWidget(rb)
-            self.plate_type_group.addButton(rb)
+                box.setChecked(True)
+            box.toggled.connect(lambda checked, b=box: self._on_plate_type_changed(checked, b))
+            plate_type_layout.addWidget(box)
+            self.plate_type_group.addButton(box)
+        options_layout.addWidget(plate_type_groupbox)
 
-        config_splitter.addWidget(plate_type_frame)
-
-        # Mode d'acquisition
-        mode_frame = QGroupBox("Mode d'acquisition")
-        mode_layout = QVBoxLayout(mode_frame)
-
-        # Groupe de boutons radio pour le mode d'acquisition
-        self.acquisition_mode_group = QButtonGroup()
+        # --- Groupe 2: Mode d'acquisition ---
+        mode_groupbox = QGroupBox("Mode d'acquisition (Client ou Expert)")
+        mode_layout = QVBoxLayout(mode_groupbox)
+        self.acquisition_mode_group = QButtonGroup(self)
+        self.acquisition_mode_group.setExclusive(True)
 
         for mode in ACQUISITION_MODES:
-            rb = QRadioButton(mode['name'])
-            rb.setProperty("acquisition_mode_id", mode['id'])
+            box = SelectionBox(mode['name'], mode['id'])
             if self.acquisition_mode_var == mode['id']:
-                rb.setChecked(True)
-            rb.toggled.connect(self._on_acquisition_mode_changed)
-            mode_layout.addWidget(rb)
-            self.acquisition_mode_group.addButton(rb)
+                box.setChecked(True)
+            box.toggled.connect(lambda checked, b=box: self._on_acquisition_mode_changed(checked, b))
+            mode_layout.addWidget(box)
+            self.acquisition_mode_group.addButton(box)
+        options_layout.addWidget(mode_groupbox)
 
-        config_splitter.addWidget(mode_frame)
+        self.config_layout.addStretch(1)
 
-        # Instructions
+        # --- Instructions ---
         instructions_frame = QGroupBox("Instructions")
         instructions_layout = QVBoxLayout(instructions_frame)
-
         instructions_text = (
-            "1. Sélectionnez le type de plaque et le mode d'acquisition.\n"
-            "2. Lancez ZymoSoft et réalisez une acquisition avec les paramètres sélectionnés.\n"
-            "3. Une fois l'acquisition terminée, cliquez sur le bouton \"Acquisition réalisée\" en bas de la fenêtre."
+            "1. Sélectionnez le type de plaque et le mode d'acquisition ci-dessus.\n"
+            "2. Lancez ZymoSoft et réalisez une acquisition en utilisant ces mêmes paramètres.\n"
+            "3. Une fois l'acquisition terminée, cliquez sur 'Étape suivante' pour sélectionner les résultats."
         )
-
         instructions_label = QLabel(instructions_text)
         instructions_label.setWordWrap(True)
-        instructions_label.setAlignment(Qt.AlignLeft)
         instructions_layout.addWidget(instructions_label)
-
-        config_splitter.addWidget(instructions_frame)
-        config_splitter.setSizes([200, 200, 100])
+        self.config_layout.addWidget(instructions_frame)
 
     def _create_selection_widgets(self):
         """
@@ -491,12 +929,12 @@ class Step3Acquisition(StepFrame):
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(10, 0, 5, 0)  # Réduire les marges
 
-        # Utiliser des onglets pour les informations, statistiques et comparaisons
-        self.info_stats_tabs = QTabWidget()
+        # Utiliser des onglets verticaux pour les informations, statistiques et comparaisons
+        self.info_stats_tabs = VerticalTabWidget()
         left_layout.addWidget(self.info_stats_tabs, 1)  # stretch factor = 1 pour prendre tout l'espace
 
         # Create all tabs for the left panel
-        self._create_info_tabs(self.info_stats_tabs)
+        self._create_info_tabs()
 
         # Initialiser la variable de commentaires
         self.comments_var = ""
@@ -523,9 +961,9 @@ class Step3Acquisition(StepFrame):
         self.graph_images = []
         self.graph_titles = []
 
-    def _create_info_tabs(self, info_stats_tabs):
+    def _create_info_tabs(self):
         """
-        Create all information tabs in the left panel
+        Create all information tabs in the left panel using VerticalTabWidget.
         """
         # Onglet Informations
         info_tab = QWidget()
@@ -533,7 +971,7 @@ class Step3Acquisition(StepFrame):
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
         info_layout.addWidget(self.info_text)
-        info_stats_tabs.addTab(info_tab, "Informations")
+        self.info_tab_index = self.info_stats_tabs.add_tab(info_tab, "Informations")
 
         # Onglet Statistiques
         stats_tab = QWidget()
@@ -543,112 +981,71 @@ class Step3Acquisition(StepFrame):
         self.stats_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.stats_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         stats_layout.addWidget(self.stats_table)
-        info_stats_tabs.addTab(stats_tab, "Statistiques")
+        self.stats_tab_index = self.info_stats_tabs.add_tab(stats_tab, "Statistiques")
 
         # Onglet Comparaison WellResults
         well_results_tab = QWidget()
         well_results_layout = QVBoxLayout(well_results_tab)
-
-        # Informations sur la comparaison
         self.well_results_info_label = QLabel("")
         self.well_results_info_label.setWordWrap(True)
-        self.well_results_info_label.setStyleSheet(f"color: {COLOR_SCHEME['text_secondary']};")
         well_results_layout.addWidget(self.well_results_info_label)
-
-        # Tableau pour afficher les résultats de comparaison
         self.well_results_table = QTableWidget(0, 6)
-        self.well_results_table.setHorizontalHeaderLabels(
-            ["Activité", "Area", "Acquisition", "Référence", "Diff", "Valide"])
+        self.well_results_table.setHorizontalHeaderLabels(["Activité", "Area", "Acquisition", "Référence", "Diff", "Valide"])
         self.well_results_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.well_results_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.well_results_table.setAlternatingRowColors(True)
         well_results_layout.addWidget(self.well_results_table)
-        self.well_results_tab_index = info_stats_tabs.addTab(well_results_tab, "Comparaison WellResults")
+        self.well_results_tab_index = self.info_stats_tabs.add_tab(well_results_tab, "Comparaison WellResults")
 
         # Onglet Comparaison LOD/LOQ
         lod_loq_tab = QWidget()
         lod_loq_layout = QVBoxLayout(lod_loq_tab)
-
-        # Informations sur la comparaison LOD/LOQ
         self.lod_loq_info_label = QLabel("")
         self.lod_loq_info_label.setWordWrap(True)
-        self.lod_loq_info_label.setStyleSheet(f"color: {COLOR_SCHEME['text_secondary']};")
         lod_loq_layout.addWidget(self.lod_loq_info_label)
-
-        # Tableau pour afficher les résultats de comparaison LOD/LOQ
         self.lod_loq_table = QTableWidget(0, 9)
-        self.lod_loq_table.setHorizontalHeaderLabels(
-            ["Area", "LOD_Ref", "LOD_Acq", "LOQ_Ref", "LOQ_Acq", "Diff LOD", "Diff LOQ", "Valide LOD", "Valide LOQ"])
+        self.lod_loq_table.setHorizontalHeaderLabels(["Area", "LOD_Ref", "LOD_Acq", "LOQ_Ref", "LOQ_Acq", "Diff LOD", "Diff LOQ", "Valide LOD", "Valide LOQ"])
         self.lod_loq_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.lod_loq_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.lod_loq_table.setAlternatingRowColors(True)
         lod_loq_layout.addWidget(self.lod_loq_table)
-        self.lod_loq_tab_index = info_stats_tabs.addTab(lod_loq_tab, "Comparaison LOD/LOQ")
+        self.lod_loq_tab_index = self.info_stats_tabs.add_tab(lod_loq_tab, "Comparaison LOD/LOQ")
 
         # Onglet Analyse des logs
         log_analysis_tab = QWidget()
         log_analysis_layout = QVBoxLayout(log_analysis_tab)
-
-        # Informations sur l'analyse des logs
-        log_info_frame = QFrame()
-        log_info_frame.setFrameShape(QFrame.StyledPanel)
-        log_info_frame.setFrameShadow(QFrame.Raised)
-        log_info_layout = QVBoxLayout(log_info_frame)
-
         self.log_info_label = QLabel("Aucune analyse de log disponible.")
         self.log_info_label.setWordWrap(True)
-        log_info_layout.addWidget(self.log_info_label)
-        log_analysis_layout.addWidget(log_info_frame)
-
-        # Tableau des résultats d'analyse des logs
-        log_table_frame = QFrame()
-        log_table_frame.setFrameShape(QFrame.StyledPanel)
-        log_table_frame.setFrameShadow(QFrame.Raised)
-        log_table_layout = QVBoxLayout(log_table_frame)
-
-        log_table_label = QLabel("Résultats de l'analyse des logs")
-        log_table_label.setStyleSheet("font-weight: bold;")
-        log_table_layout.addWidget(log_table_label)
-
-        self.log_analysis_table = QTableWidget()
-        self.log_analysis_table.setColumnCount(2)
+        log_analysis_layout.addWidget(self.log_info_label)
+        self.log_analysis_table = QTableWidget(0, 2)
         self.log_analysis_table.setHorizontalHeaderLabels(["Paramètre", "Valeur"])
         self.log_analysis_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.log_analysis_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.log_analysis_table.setAlternatingRowColors(True)
-        log_table_layout.addWidget(self.log_analysis_table)
-
-        log_analysis_layout.addWidget(log_table_frame)
-        self.log_analysis_tab_index = info_stats_tabs.addTab(log_analysis_tab, "Analyse des logs")
+        log_analysis_layout.addWidget(self.log_analysis_table)
+        self.log_analysis_tab_index = self.info_stats_tabs.add_tab(log_analysis_tab, "Analyse des logs")
 
     def _update_tab_colors(self):
         """
-        Met à jour les couleurs des onglets en fonction des résultats de validation
+        Met à jour les couleurs des onglets verticaux en fonction des résultats de validation.
         """
         try:
             if not hasattr(self, 'info_stats_tabs') or not self.info_stats_tabs:
                 return
 
-            # Réinitialiser les couleurs des onglets
-            self.info_stats_tabs.setStyleSheet("")
+            # Statut général (par défaut: succès)
+            general_status = True
+            if self.analysis_results and self.analysis_results.get("validation", {}).get("global_status") is False:
+                general_status = False
 
-            # Vérifier les erreurs dans chaque onglet et colorer en orange si nécessaire
-            tab_styles = []
+            self.info_stats_tabs.update_tab_status(self.info_tab_index, general_status)
+            self.info_stats_tabs.update_tab_status(self.stats_tab_index, general_status)
 
-            # Vérifier l'onglet Comparaison WellResults
-            if hasattr(self, 'well_results_tab_index') and self._has_well_results_errors():
-                tab_styles.append(
-                    f"QTabWidget::tab:nth-child({self.well_results_tab_index + 1}) {{ background-color: orange; }}")
+            # Statut pour la comparaison WellResults
+            well_results_status = not self._has_well_results_errors()
+            self.info_stats_tabs.update_tab_status(self.well_results_tab_index, well_results_status)
 
-            # Vérifier l'onglet Comparaison LOD/LOQ
-            if hasattr(self, 'lod_loq_tab_index') and self._has_lod_loq_errors():
-                tab_styles.append(
-                    f"QTabWidget::tab:nth-child({self.lod_loq_tab_index + 1}) {{ background-color: orange; }}")
+            # Statut pour la comparaison LOD/LOQ
+            lod_loq_status = not self._has_lod_loq_errors()
+            self.info_stats_tabs.update_tab_status(self.lod_loq_tab_index, lod_loq_status)
 
-            # Appliquer les styles si nécessaire
-            if tab_styles:
-                combined_style = "QTabWidget::pane { border: 1px solid #C0C0C0; } " + " ".join(tab_styles)
-                self.info_stats_tabs.setStyleSheet(combined_style)
+            # Statut pour l'analyse des logs
+            log_status = "log_analysis_error" not in self.analysis_results if self.analysis_results else None
+            self.info_stats_tabs.update_tab_status(self.log_analysis_tab_index, log_status)
 
         except Exception as e:
             logger.error(f"Erreur dans _update_tab_colors: {str(e)}", exc_info=True)
@@ -769,25 +1166,21 @@ class Step3Acquisition(StepFrame):
         nav_buttons_layout.addWidget(self.next_image_button)
 
     # Event handlers for widget interactions
-    def _on_plate_type_changed(self, checked):
+    def _on_plate_type_changed(self, checked, box):
         """
-        Appelé lorsque le type de plaque est modifié
+        Appelé lorsque le type de plaque est modifié.
         """
         if checked:
-            sender = self.sender()
-            if sender:
-                self.plate_type_var = sender.property("plate_type_id")
-                logger.info(f"Type de plaque sélectionné: {self.plate_type_var}")
+            self.plate_type_var = box.get_id()
+            logger.info(f"Type de plaque sélectionné: {self.plate_type_var}")
 
-    def _on_acquisition_mode_changed(self, checked):
+    def _on_acquisition_mode_changed(self, checked, box):
         """
-        Appelé lorsque le mode d'acquisition est modifié
+        Appelé lorsque le mode d'acquisition est modifié.
         """
         if checked:
-            sender = self.sender()
-            if sender:
-                self.acquisition_mode_var = sender.property("acquisition_mode_id")
-                logger.info(f"Mode d'acquisition sélectionné: {self.acquisition_mode_var}")
+            self.acquisition_mode_var = box.get_id()
+            logger.info(f"Mode d'acquisition sélectionné: {self.acquisition_mode_var}")
 
     def _on_folder_entry_changed(self, text):
         """
@@ -1396,7 +1789,6 @@ class Step3Acquisition(StepFrame):
                 self._reset_analysis_button()
                 return
 
-            self.notebook.setTabEnabled(2, True)
             self.notebook.setCurrentIndex(2)
 
             # Display all results with proper error handling
@@ -2202,17 +2594,16 @@ class Step3Acquisition(StepFrame):
                 QMessageBox.critical(self.widget, "Erreur",
                                      "Une erreur interne est survenue. Veuillez redémarrer l'application.")
                 return
-            current_tab = self.notebook.currentIndex()
-            if current_tab > 0:
-                self.notebook.setCurrentIndex(current_tab - 1)
-                self._update_nav_buttons()
+            current_index = self.notebook.currentIndex()
+            if current_index > 0:
+                self.notebook.setCurrentIndex(current_index - 1)
         except Exception as e:
             logger.error(f"Erreur dans _previous_substep: {str(e)}", exc_info=True)
             QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue :\n{str(e)}")
 
     def _next_substep(self):
         """
-        Passe à la sous-étape suivante ou exécute l'action appropriée selon l'onglet actif
+        Passe à la sous-étape suivante ou exécute l'action appropriée selon la page active.
         """
         try:
             if not self.notebook:
@@ -2221,19 +2612,17 @@ class Step3Acquisition(StepFrame):
                                      "Une erreur interne est survenue. Veuillez redémarrer l'application.")
                 return
 
-            current_tab = self.notebook.currentIndex()
+            current_index = self.notebook.currentIndex()
 
-            if current_tab == 0:  # Onglet Configuration
-                self._acquisition_done()
-            elif current_tab == 1:  # Onglet Sélection des résultats
-                # Vérifier si un dossier valide est sélectionné
+            if current_index == 0:  # Page de Configuration
+                self.notebook.setCurrentIndex(1)
+            elif current_index == 1:  # Page de Sélection des résultats
                 if not self.results_folder_var or not os.path.exists(self.results_folder_var):
                     QMessageBox.warning(self.widget, "Attention",
                                         "Veuillez d'abord sélectionner un dossier de résultats valide.")
                     return
                 self._analyze_results()
-            elif current_tab == 2:  # Onglet Analyse
-                # Valider l'acquisition et passer à l'étape suivante
+            elif current_index == 2:  # Page d'Analyse
                 self._show_comments_dialog("validate_next", True, False)
         except Exception as e:
             logger.error(f"Erreur dans _next_substep: {str(e)}", exc_info=True)
@@ -2241,93 +2630,91 @@ class Step3Acquisition(StepFrame):
 
     def _acquisition_done(self):
         """
-        Appelé lorsque l'utilisateur a terminé l'acquisition
+        Appelé lorsque l'utilisateur a terminé l'acquisition (obsolète avec la nouvelle navigation,
+        mais conservé pour la logique de _next_substep).
         """
         try:
             if not self.notebook:
                 logger.error("Erreur dans _acquisition_done: self.notebook est None")
-                QMessageBox.critical(self.widget, "Erreur",
-                                     "Une erreur interne est survenue. Veuillez redémarrer l'application.")
                 return
-            self.notebook.setTabEnabled(1, True)
             self.notebook.setCurrentIndex(1)
-            self._update_nav_buttons()
         except Exception as e:
             logger.error(f"Erreur dans _acquisition_done: {str(e)}", exc_info=True)
             QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue :\n{str(e)}")
 
-    def _on_tab_changed(self, index):
+    def _on_substep_changed(self, index):
         """
-        Appelé lorsque l'onglet actif change
+        Appelé lorsque la page active du QStackedWidget change.
         """
         try:
+            if self.substep_indicator_label and index < len(self.substep_titles):
+                self.substep_indicator_label.setText(f"Étape {index + 1}/{len(self.substep_titles)}: {self.substep_titles[index]}")
             self._update_nav_buttons()
         except Exception as e:
-            logger.error(f"Erreur dans _on_tab_changed: {str(e)}", exc_info=True)
+            logger.error(f"Erreur dans _on_substep_changed: {str(e)}", exc_info=True)
+
+    def _show_acquisition_details_modal(self, item, column):
+        """
+        Affiche une boîte de dialogue avec les détails d'une acquisition de l'historique.
+        """
+        try:
+            acquisition_id = int(item.text(0))
+            acquisition_data = next((acq for acq in self.acquisitions if acq['id'] == acquisition_id), None)
+
+            if acquisition_data:
+                dialog = AcquisitionDetailsDialog(acquisition_data, self.widget)
+                dialog.exec_()
+            else:
+                QMessageBox.warning(self.widget, "Erreur", f"Impossible de trouver les données pour l'acquisition #{acquisition_id}.")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'affichage du modal de détails: {str(e)}", exc_info=True)
+            QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue: {e}")
 
     def _update_nav_buttons(self):
         """
-        Met à jour l'état des boutons de navigation
+        Met à jour l'état des boutons de navigation en fonction de la page active.
         """
         try:
             if not self.notebook:
                 logger.error("Erreur dans _update_nav_buttons: self.notebook est None")
                 return
 
-            current_tab = self.notebook.currentIndex()
+            current_index = self.notebook.currentIndex()
 
             # Gestion du bouton précédent
             if self.prev_substep_button:
-                self.prev_substep_button.setEnabled(current_tab > 0)
+                self.prev_substep_button.setEnabled(current_index > 0)
 
-            # Gestion des boutons d'action supplémentaires
-            if current_tab == 2:  # Onglet d'analyse
-                if self.validate_continue_button:
-                    self.validate_continue_button.setVisible(True)
-                if self.invalidate_button:
-                    self.invalidate_button.setVisible(True)
-                if self.report_button:
-                    self.report_button.setVisible(True)
-            else:
-                if self.validate_continue_button:
-                    self.validate_continue_button.setVisible(False)
-                if self.invalidate_button:
-                    self.invalidate_button.setVisible(False)
-                if self.report_button:
-                    self.report_button.setVisible(False)
+            # Gestion des boutons d'action supplémentaires (visibles uniquement sur la page d'analyse)
+            is_analysis_page = (current_index == 2)
+            if self.validate_continue_button:
+                self.validate_continue_button.setVisible(is_analysis_page)
+            if self.invalidate_button:
+                self.invalidate_button.setVisible(is_analysis_page)
+            if self.report_button:
+                self.report_button.setVisible(is_analysis_page)
 
             # Gestion du bouton suivant
             if not self.next_substep_button:
                 return
 
-            if current_tab == 0:  # Onglet Configuration
-                self.next_substep_button.setText("Acquisition réalisée")
+            if current_index == 0:  # Page de Configuration
+                self.next_substep_button.setText("Étape suivante")
                 self.next_substep_button.setEnabled(True)
                 self.next_substep_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
-            elif current_tab == 1:  # Onglet Sélection des résultats
+            elif current_index == 1:  # Page de Sélection des résultats
                 self.next_substep_button.setText("Analyser les résultats")
-
-                # Vérifier si un dossier de résultats valide est sélectionné
                 results_folder_valid = bool(self.results_folder_var and os.path.exists(self.results_folder_var))
-
-                # Vérifier si un dossier de référence valide est sélectionné (requis si options de comparaison activées)
-                reference_folder_required = bool(self.do_compare_to_ref or self.do_compare_enzymo_to_ref)
+                reference_folder_required = self.do_compare_to_ref or self.do_compare_enzymo_to_ref
                 reference_folder_valid = bool(self.reference_folder_var and os.path.exists(self.reference_folder_var))
-
-                # Déterminer si l'analyse peut procéder
-                can_analyze = bool(results_folder_valid and (not reference_folder_required or reference_folder_valid))
-
+                can_analyze = results_folder_valid and (not reference_folder_required or reference_folder_valid)
                 self.next_substep_button.setEnabled(can_analyze)
-
                 if can_analyze:
-                    self.next_substep_button.setStyleSheet(
-                        f"background-color: {COLOR_SCHEME['primary']}; color: white;")
+                    self.next_substep_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
                 else:
-                    self.next_substep_button.setStyleSheet(
-                        f"background-color: {COLOR_SCHEME['disabled']}; color: white;")
-
-            elif current_tab == 2:  # Onglet Analyse
-                self.next_substep_button.setText("Valider et étape suivante")
+                    self.next_substep_button.setStyleSheet(f"background-color: {COLOR_SCHEME['disabled']}; color: white;")
+            elif current_index == 2:  # Page d'Analyse
+                self.next_substep_button.setText("Valider et terminer l'acquisition")
                 self.next_substep_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
                 self.next_substep_button.setEnabled(True)
             else:
@@ -2441,8 +2828,6 @@ class Step3Acquisition(StepFrame):
                                          "Une erreur interne est survenue. Veuillez redémarrer l'application.")
                     return
                 self.notebook.setCurrentIndex(0)
-                self.notebook.setTabEnabled(1, False)
-                self.notebook.setTabEnabled(2, False)
                 self._update_nav_buttons()
             else:
                 self.main_window.next_step()
@@ -2674,8 +3059,6 @@ class Step3Acquisition(StepFrame):
             self._update_history()
 
             if self.notebook:
-                self.notebook.setTabEnabled(1, False)
-                self.notebook.setTabEnabled(2, False)
                 self.notebook.setCurrentIndex(0)
                 self._update_nav_buttons()
 
@@ -2689,12 +3072,6 @@ class Step3Acquisition(StepFrame):
         """
         try:
             logger.debug("Affichage de l'étape 3 (Step3Acquisition)")
-
-            # Vérifier si self.notebook est None et le réinitialiser si nécessaire
-            if not self.notebook:
-                logger.warning("self.notebook est None lors de l'affichage de l'étape 3, réinitialisation du notebook")
-                self._reinitialize_notebook()
-
             # Mettre à jour l'historique au cas où des données auraient été chargées
             self._update_history()
 
@@ -2707,213 +3084,6 @@ class Step3Acquisition(StepFrame):
         except Exception as e:
             logger.error(f"Erreur dans on_show: {str(e)}", exc_info=True)
 
-    def _reinitialize_notebook(self):
-        """
-        Réinitialise uniquement le notebook sans recréer tous les widgets
-        Cette méthode est appelée uniquement si self.notebook est None
-        """
-        try:
-            logger.debug("Réinitialisation du notebook")
-
-            # Find the main_layout (first child of self.layout)
-            main_layout = None
-            for i in range(self.layout.count()):
-                item = self.layout.itemAt(i)
-                if item and item.layout():
-                    main_layout = item.layout()
-                    break
-
-            if not main_layout:
-                logger.error("Impossible de trouver le main_layout")
-                return
-
-            # Find the splitter in main_layout
-            main_splitter = None
-            for i in range(main_layout.count()):
-                item = main_layout.itemAt(i)
-                if item and item.widget() and isinstance(item.widget(), QSplitter):
-                    main_splitter = item.widget()
-                    break
-
-            if not main_splitter:
-                logger.error("Impossible de trouver le main_splitter")
-                return
-
-            # Check if a QTabWidget already exists in the main_splitter
-            notebook_exists = False
-            notebook_widget = None
-            for i in range(main_splitter.count()):
-                widget = main_splitter.widget(i)
-                if isinstance(widget, QTabWidget):
-                    notebook_exists = True
-                    notebook_widget = widget
-                    break
-
-            if notebook_exists and notebook_widget:
-                # Use existing notebook
-                logger.info("Notebook existant trouvé, réutilisation")
-                self.notebook = notebook_widget
-                self._reinitialize_widget_references()
-            else:
-                # Create new notebook
-                logger.info("Création d'un nouveau notebook")
-                self.notebook = QTabWidget()
-                main_splitter.insertWidget(0, self.notebook)
-                self._create_all_tabs()
-
-            # Update navigation buttons state
-            self._update_nav_buttons()
-
-            logger.info("Notebook réinitialisé avec succès")
-        except Exception as e:
-            logger.error(f"Erreur dans _reinitialize_notebook: {str(e)}", exc_info=True)
-
-    def _reinitialize_widget_references(self):
-        """
-        Réinitialise les références aux widgets dans les onglets existants
-        """
-        try:
-            # Réinitialiser les index d'onglets
-            self.well_results_tab_index = -1
-            self.lod_loq_tab_index = -1
-            self.log_analysis_tab_index = -1
-
-            # Get widget references from the selection tab
-            selection_frame = self.notebook.widget(1)
-            if selection_frame:
-                # Find folder entry widget
-                for widget in selection_frame.findChildren(QLineEdit):
-                    if hasattr(widget, 'textChanged'):
-                        self.folder_entry = widget
-                        break
-
-                # Find info labels
-                for widget in selection_frame.findChildren(QLabel):
-                    if widget.wordWrap() and "dossier" in widget.text().lower():
-                        if not self.folder_info_label:
-                            self.folder_info_label = widget
-                        elif not self.ref_folder_info_label:
-                            self.ref_folder_info_label = widget
-
-                # Find progress widgets
-                for widget in selection_frame.findChildren(QProgressBar):
-                    self.progress_bar = widget
-                    break
-
-                for widget in selection_frame.findChildren(QLabel):
-                    if widget.alignment() == Qt.AlignLeft and not widget.wordWrap():
-                        self.progress_label = widget
-                        break
-
-            # Get widget references from the analysis tab
-            analysis_frame = self.notebook.widget(2)
-            if analysis_frame:
-                # Find the info_stats_tabs (QTabWidget)
-                for widget in analysis_frame.findChildren(QTabWidget):
-                    self.info_stats_tabs = widget
-
-                    # Retrouver les index des onglets par leur titre
-                    for i in range(widget.count()):
-                        tab_text = widget.tabText(i)
-                        if "WellResults" in tab_text:
-                            self.well_results_tab_index = i
-                        elif "LOD/LOQ" in tab_text:
-                            self.lod_loq_tab_index = i
-                        elif "logs" in tab_text:
-                            self.log_analysis_tab_index = i
-                    break
-
-                for widget in analysis_frame.findChildren(QTextEdit):
-                    if widget.isReadOnly():
-                        self.info_text = widget
-                        break
-
-                # Find tables
-                for widget in analysis_frame.findChildren(QTableWidget):
-                    if widget.columnCount() == 2 and "Paramètre" in [widget.horizontalHeaderItem(i).text() for i in
-                                                                     range(widget.columnCount()) if
-                                                                     widget.horizontalHeaderItem(i)]:
-                        # Distinguer entre stats_table et log_analysis_table
-                        parent_widget = widget.parent()
-                        while parent_widget:
-                            if isinstance(parent_widget, QGroupBox) or isinstance(parent_widget, QFrame):
-                                break
-                            parent_widget = parent_widget.parent()
-
-                        # Si le parent contient "log" dans son contexte, c'est le log_analysis_table
-                        is_log_table = False
-                        if parent_widget:
-                            for child in parent_widget.findChildren(QLabel):
-                                if "log" in child.text().lower():
-                                    is_log_table = True
-                                    break
-
-                        if is_log_table:
-                            self.log_analysis_table = widget
-                        else:
-                            self.stats_table = widget
-                    elif widget.columnCount() == 6:
-                        self.well_results_table = widget
-                    elif widget.columnCount() == 9:
-                        self.lod_loq_table = widget
-
-                # Find image display widget - chercher par d'autres critères car minimumHeight a changé
-                for widget in analysis_frame.findChildren(QLabel):
-                    if (widget.alignment() == Qt.AlignCenter and
-                            hasattr(widget, 'mousePressEvent') and
-                            f"background-color: {COLOR_SCHEME['background']}" in widget.styleSheet()):
-                        self.graphs_widget = widget
-                        break
-
-                # Find info labels in the analysis tab
-                for widget in analysis_frame.findChildren(QLabel):
-                    if widget.wordWrap():
-                        widget_text = widget.text().lower()
-                        if "wellresults" in widget_text and not self.well_results_info_label:
-                            self.well_results_info_label = widget
-                        elif "lod" in widget_text and "loq" in widget_text and not self.lod_loq_info_label:
-                            self.lod_loq_info_label = widget
-                        elif "log" in widget_text and not self.log_info_label:
-                            self.log_info_label = widget
-
-            # Find history tree widget
-            main_layout = None
-            for i in range(self.layout.count()):
-                item = self.layout.itemAt(i)
-                if item and item.layout():
-                    main_layout = item.layout()
-                    break
-
-            if main_layout:
-                # Find splitter in main_layout
-                main_splitter = None
-                for i in range(main_layout.count()):
-                    item = main_layout.itemAt(i)
-                    if item and item.widget() and isinstance(item.widget(), QSplitter):
-                        main_splitter = item.widget()
-                        break
-
-                if main_splitter:
-                    # Find QGroupBox in splitter
-                    for i in range(main_splitter.count()):
-                        widget = main_splitter.widget(i)
-                        if isinstance(widget, QGroupBox) and widget.title() == "Historique des acquisitions":
-                            history_frame = widget
-                            for child in history_frame.findChildren(QTreeWidget):
-                                self.history_tree = child
-                                logger.info("Référence à l'historique des acquisitions réinitialisée")
-                                break
-                            break
-
-            # Reconnect signals if widgets are found
-            if self.folder_entry:
-                self.folder_entry.textChanged.connect(self._on_folder_entry_changed)
-
-            if self.notebook:
-                self.notebook.currentChanged.connect(self._on_tab_changed)
-
-        except Exception as e:
-            logger.error(f"Erreur dans _reinitialize_widget_references: {str(e)}", exc_info=True)
 
     # Additional utility methods for robust data handling
     def _safe_float_format(self, value, decimals=4):

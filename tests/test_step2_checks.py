@@ -8,9 +8,14 @@ from zymosoft_assistant.gui.step2_checks import Step2Checks
 
 class TestStep2ChecksReset(unittest.TestCase):
     def setUp(self):
-        self.parent = MagicMock()
+        # Using None for the parent avoids the need for a QApplication instance in these non-GUI tests
+        self.parent = None
         self.main_window = MagicMock()
-        self.step2_checks = Step2Checks(self.parent, self.main_window)
+        self.main_window.session_data = {}  # Mock session data
+
+        # We need to patch the super().__init__ call in StepFrame to avoid creating a QWidget
+        with patch("zymosoft_assistant.gui.step_frame.StepFrame.__init__", return_value=None):
+            self.step2_checks = Step2Checks(self.parent, self.main_window)
 
         # Mocking UI elements required for the reset function
         self.step2_checks.folder_display_label = MagicMock()
@@ -64,16 +69,18 @@ class TestStep2ChecksReset(unittest.TestCase):
     def test_reset_updates_folder_display_label_style(self):
         mock_label = self.step2_checks.folder_display_label
         self.step2_checks.reset()
-        mock_label.setStyleSheet.assert_called_once_with(
-            """QLabel {
+        # The string must match exactly, including leading/trailing whitespace from the triple-quoted string in the source
+        expected_stylesheet = f"""
+            QLabel {{
                 padding: 15px;
                 border: 2px dashed #ddd;
                 border-radius: 8px;
                 background-color: #f8f9fa;
                 color: #666;
                 font-size: 12pt;
-            }"""
-        )
+            }}
+        """
+        mock_label.setStyleSheet.assert_called_once_with(expected_stylesheet)
 
     def test_reset_hides_start_analysis_button(self):
         mock_button = self.step2_checks.start_analysis_button
