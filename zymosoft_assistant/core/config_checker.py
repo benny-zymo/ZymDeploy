@@ -22,11 +22,16 @@ class ConfigChecker:
 
     def __init__(self, base_path: str = None):
         """
-        Initialise le vérificateur de configuration
+        Initializes an instance for handling ZymoSoft installation verification.
 
-        Args:
-            base_path: Chemin de base de l'installation ZymoSoft
-                      (par défaut: C:/Users/Public/Zymoptiq/ZymoSoft_V*)
+        The class is responsible for initializing base configuration, checking
+        if the provided path exists, and extracting version details from the ZymoSoft
+        installation path.
+
+        :param base_path: The base path of the ZymoSoft installation. If not
+            provided, the system will automatically attempt to locate the installation
+            directory.
+        :type base_path: str
         """
         self.base_path = base_path
         if not self.base_path:
@@ -77,7 +82,7 @@ class ConfigChecker:
             return {"installation_valid": False}
 
         results = {
-            "installation_valid": True,
+            "installation_valid": False,
             "bin_exists": False,
             "etc_exists": False,
             "resultats_exists": False,
@@ -187,10 +192,12 @@ class ConfigChecker:
                 results["values"][f"{section}.{key}"] = value
 
                 if value.lower() != expected_value.lower():
-                    results["warnings"].append(
+                    results["errors"].append(
                         f"Valeur incorrecte pour [{section}] {key}: "
                         f"'{value}' (attendu: '{expected_value}')"
                     )
+                    results["config_valid"] = False
+
             else:
                 if section in config:
                     results["errors"].append(f"Propriété '{key}' manquante dans [{section}]")
@@ -230,10 +237,34 @@ class ConfigChecker:
 
     def validate_plate_config_ini(self) -> Dict[str, Any]:
         """
-        Valide le fichier PlateConfig.ini
+        Validates the PlateConfig.ini configuration file and checks for the presence and correctness
+        of specified sections and parameters. The function verifies the existence of required
+        sections, configuration parameters, and additional files listed within the PlateConfig.ini file.
+        It processes data related to plate types, interf and reflecto parameters, as well as
+        temperature-related files.
 
-        Returns:
-            Dictionnaire avec les résultats de validation
+        The validation evaluates the following:
+        - Presence of the "PlateType" section in the configuration file.
+        - Existence of associated plate configurations for each plate type.
+        - Validity of specified "InterfParams" and "ReflectoParams" ensuring no simultaneous usage and
+          checks for file existence.
+        - Presence and existence of required temperature-related files specified for each plate configuration.
+
+        Returns a dictionary containing:
+          - Whether the configuration is valid.
+          - List of encountered errors and warnings.
+          - List of plate types with their respective configuration names.
+          - Processed plate configurations with interf parameters, reflecto parameters, and temperature
+            file details.
+
+        :param self: The class instance reference used to fetch the base path.
+        :return: A dictionary containing validation results with keys:
+                 - "config_valid" (bool): Indicates validity of the configuration.
+                 - "errors" (list[str]): List of error messages.
+                 - "warnings" (list[str]): List of warnings, if any.
+                 - "plate_types" (list[dict]): Contains plate type names and their corresponding configs.
+                 - "configs" (dict): Processed configurations with interf/reflecto and temperature details.
+        :rtype: Dict[str, Any]
         """
         config_path = os.path.join(self.base_path, "etc", "PlateConfig.ini")
 
@@ -280,6 +311,9 @@ class ConfigChecker:
                 "reflecto_params": None,
                 "temperature_files": []
             }
+
+
+
 
             # Vérification des paramètres Interf et Reflecto - une config ne peut pas avoir les deux
             has_interf = False
@@ -362,7 +396,7 @@ class ConfigChecker:
         }
 
         # Vérification des sections obligatoires
-        required_sections = ["Motors", "Defaults", "PlateType"]
+        required_sections = ["Motors", "Defaults", "PlateType", "AutoFocus"]
         for section in required_sections:
             if section not in config:
                 results["errors"].append(f"Section [{section}] manquante")
@@ -371,10 +405,19 @@ class ConfigChecker:
         # Vérification du port COM
         if "Motors" in config and "Port" in config["Motors"]:
             port = config["Motors"]["Port"]
-            results["values"]["com_port"] = port
+            results["values"]["Motor Com Port"] = port
         else:
             if "Motors" in config:
                 results["errors"].append("Propriété 'Port' manquante dans [Motors]")
+                results["config_valid"] = False
+
+        # Vérification du port COM de l'auto-focus
+        if "AutoFocus" in config and "Port" in config["AutoFocus"]:
+            port = config["AutoFocus"]["Port"]
+            results["values"]["AutoFocus Com Port"] = port
+        else:
+            if "AutoFocus" in config:
+                results["errors"].append("Propriété 'Port' manquante dans [AutoFocus]")
                 results["config_valid"] = False
 
         # Vérification des valeurs par défaut

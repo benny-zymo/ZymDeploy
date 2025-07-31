@@ -187,6 +187,8 @@ class Step1Info(StepFrame):
         """)
         self.error_label.setWordWrap(True)
         self.error_label.hide()  # Caché par défaut
+        # Réserve l'espace pour éviter le compactage des champs lors de l'affichage du message d'erreur
+        self.error_label.setMinimumHeight(40)
         info_section.addWidget(self.error_label)
 
         self.layout.addLayout(info_section)
@@ -194,7 +196,8 @@ class Step1Info(StepFrame):
         # === ESPACE FLEXIBLE ===
         self.layout.addStretch(1)
 
-        # === CONNEXIONS DES SIGNAUX ===
+        # === CONNEXION
+        # S DES SIGNAUX ===
         # Validation en temps réel
         self.client_name_edit.textChanged.connect(self.validate)
         self.cs_responsible_edit.textChanged.connect(self.validate)
@@ -245,8 +248,8 @@ class Step1Info(StepFrame):
                     self.instrumentation_responsible_edit.style().polish(self.instrumentation_responsible_edit)
 
             # Afficher le message d'erreur de manière plus lisible
-            self.error_label.setText("Veuillez remplir tous les champs obligatoires marqués en rouge.")
-            self.error_label.show()
+           # self.error_label.setText("Veuillez remplir tous les champs obligatoires marqués en rouge.")
+            #self.error_label.show()
             logger.warning(f"Validation de l'étape 1 échouée: {errors}")
             return False
 
