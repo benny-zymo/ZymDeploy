@@ -455,3 +455,51 @@ class FileValidator:
             results["valid"] = False
         
         return results
+
+    @staticmethod
+    def validate_acquisition_folder(folder_path: str, is_expert_mode: bool) -> Dict[str, Any]:
+        """
+        Valide le contenu d'un dossier de résultats d'acquisition.
+
+        Args:
+            folder_path: Chemin du dossier à valider.
+            is_expert_mode: True si le mode expert est activé.
+
+        Returns:
+            Dictionnaire avec les résultats de validation.
+        """
+        errors = []
+
+        if not folder_path or not os.path.isdir(folder_path):
+            errors.append("Le dossier sélectionné est invalide ou n'existe pas.")
+            return {"is_valid": False, "errors": errors}
+
+        # 1. Vérification du sous-dossier "Image" en mode expert
+        if is_expert_mode:
+            image_folder_path = os.path.join(folder_path, "Image")
+            if not os.path.isdir(image_folder_path):
+                errors.append("Mode expert: Le dossier doit contenir un sous-dossier 'Image'.")
+
+        # 2. Vérification du fichier .zym et de son contenu
+        zym_file_path = None
+        for filename in os.listdir(folder_path):
+            if filename.lower().endswith('.zym'):
+                zym_file_path = os.path.join(folder_path, filename)
+                break
+
+        if not zym_file_path:
+            errors.append("Aucun fichier .zym trouvé dans le dossier.")
+        else:
+            try:
+                with open(zym_file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    is_layer = 'profil="Layer"' in content
+                    is_dot = 'profil="Dot"' in content
+
+                    if not is_layer and not is_dot:
+                        errors.append('Le fichier .zym ne contient pas de profil valide (profil="Layer" ou profil="Dot").')
+
+            except Exception as e:
+                errors.append(f"Erreur de lecture du fichier .zym: {e}")
+
+        return {"is_valid": len(errors) == 0, "errors": errors}

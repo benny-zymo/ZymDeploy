@@ -334,6 +334,12 @@ class ReportGenerator:
         else:
             elements.append(
                 Paragraph("Statut global : <font color='red'>✗ Installation non valide</font>", styles['normal']))
+
+        # Version de Zymosoft
+        structure_checks = checks.get("structure", {})
+        zymosoft_version = structure_checks.get('zymosoft_version', 'N/A')
+        elements.append(Paragraph(f"Version ZymoSoft : <b>{zymosoft_version}</b>", styles['normal']))
+
         elements.append(Spacer(1, 0.2 * cm))
 
         # Section 2 : Erreurs et avertissements
