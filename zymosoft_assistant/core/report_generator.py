@@ -12,8 +12,6 @@ import json
 import datetime
 from typing import Dict, Any, List, Optional
 from pathlib import Path
-
-import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
@@ -1036,9 +1034,13 @@ class ReportGenerator:
         """
         try:
             # Chercher les graphiques de comparaison aux références
+            analysis_data = analysis.get("analysis", {})
+            results_folder = analysis_data.get("folder")
             validation_dir = ""
-            if analysis.get("folder"):
-                validation_dir = os.path.join(analysis["folder"], "validation_results", "validation_comparison")
+            if results_folder:
+                validation_dir = os.path.join(results_folder, "validation_results", "validation_comparison")
+
+            logger.info(f"Recherche de graphiques de comparaison de référence dans : {validation_dir}")
 
             if os.path.exists(validation_dir):
                 reference_graphs = []
@@ -1047,18 +1049,21 @@ class ReportGenerator:
                         reference_graphs.append(os.path.join(validation_dir, file))
 
                 if reference_graphs:
+                    logger.info(f"{len(reference_graphs)} graphiques trouvés.")
                     # Traiter les graphiques par paires
                     for i in range(0, len(reference_graphs), 2):
                         graph_row = []
 
                         # Premier graphique de la paire
                         if i < len(reference_graphs) and os.path.exists(reference_graphs[i]):
+                            logger.debug(f"Ajout du graphique: {reference_graphs[i]}")
                             graph_row.append(Image(reference_graphs[i], width=3.5 * inch, height=2.5 * inch))
                         else:
                             graph_row.append("")
 
                         # Deuxième graphique de la paire (s'il existe)
                         if i + 1 < len(reference_graphs) and os.path.exists(reference_graphs[i + 1]):
+                            logger.debug(f"Ajout du graphique: {reference_graphs[i+1]}")
                             graph_row.append(Image(reference_graphs[i + 1], width=3.5 * inch, height=2.5 * inch))
                         else:
                             graph_row.append("")
@@ -1085,9 +1090,13 @@ class ReportGenerator:
         """
         try:
             # Chercher les graphiques de comparaison enzymatique
+            analysis_data = analysis.get("analysis", {})
+            results_folder = analysis_data.get("folder")
             validation_dir = ""
-            if analysis.get("folder"):
-                validation_dir = os.path.join(analysis["folder"], "validation_results", "comparaison_enzymo_routine")
+            if results_folder:
+                validation_dir = os.path.join(results_folder, "validation_results", "comparaison_enzymo_routine")
+
+            logger.info(f"Recherche de graphiques de calibration enzymatique dans : {validation_dir}")
 
             if os.path.exists(validation_dir):
                 enzymo_graphs = []
@@ -1096,18 +1105,21 @@ class ReportGenerator:
                         enzymo_graphs.append(os.path.join(validation_dir, file))
 
                 if enzymo_graphs:
+                    logger.info(f"{len(enzymo_graphs)} graphiques trouvés.")
                     # Traiter les graphiques par paires
                     for i in range(0, len(enzymo_graphs), 2):
                         graph_row = []
 
                         # Premier graphique de la paire
                         if i < len(enzymo_graphs) and os.path.exists(enzymo_graphs[i]):
+                            logger.debug(f"Ajout du graphique: {enzymo_graphs[i]}")
                             graph_row.append(Image(enzymo_graphs[i], width=3.5 * inch, height=2.5 * inch))
                         else:
                             graph_row.append("")
 
                         # Deuxième graphique de la paire (s'il existe)
                         if i + 1 < len(enzymo_graphs) and os.path.exists(enzymo_graphs[i + 1]):
+                            logger.debug(f"Ajout du graphique: {enzymo_graphs[i+1]}")
                             graph_row.append(Image(enzymo_graphs[i + 1], width=3.5 * inch, height=2.5 * inch))
                         else:
                             graph_row.append("")
