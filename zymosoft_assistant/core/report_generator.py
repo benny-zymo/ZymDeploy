@@ -656,7 +656,7 @@ class ReportGenerator:
             elements.append(Spacer(1, 0.15 * inch))
 
             # 2. Statistiques d'acquisition
-            statistics = analysis.get("statistics", {})
+            statistics = analysis.get("analysis", {}).get("statistics", {})
             if statistics:
                 elements.append(Paragraph("2. Statistiques d'acquisition", styles['heading1']))
 
@@ -675,7 +675,7 @@ class ReportGenerator:
                 elements.append(Spacer(1, 0.15 * inch))
 
             # 3. Comparaison à la référence (avec contexte nanofilm/micro-dépôt)
-            validation = analysis.get("validation", {})
+            validation = analysis.get("analysis", {}).get("validation", {})
             if validation and "comparison" in validation:
                 # Titre contextualisé selon le type de plaque
                 comparison_title = f"3. Comparaison à la référence, {type_description}"
@@ -758,7 +758,7 @@ class ReportGenerator:
                 elements.append(Paragraph("4. Comparaison des gammes de calibration", styles['heading1']))
 
                 try:
-                    well_results_df = validation["well_results_comparison"]
+                    well_results_df = pd.DataFrame(validation["well_results_comparison"])
 
                     # 4.1 Résumé
                     elements.append(Paragraph("4.1 Résumé", styles['heading2']))
@@ -844,7 +844,7 @@ class ReportGenerator:
                 elements.append(Paragraph("5. Comparaison des LOD/LOQ", styles['heading1']))
 
                 try:
-                    lod_loq_df = validation["lod_loq_comparison"]
+                    lod_loq_df = pd.DataFrame(validation["lod_loq_comparison"])
 
                     # Préparation des données pour le tableau avec nouveaux en-têtes
                     lod_loq_data = [["Zone", "LOD Ref (ZU)", "LOD déploiement (ZU)", "Diff LOD (point de %)",
@@ -893,7 +893,7 @@ class ReportGenerator:
                     elements.append(Spacer(1, 0.15 * inch))
 
             # 6. Analyse technique (sans sous-section 6.1 s'il n'y a qu'une seule analyse)
-            log_analysis = analysis.get("log_analysis", {})
+            log_analysis = analysis.get("analysis", {}).get("log_analysis", {})
             if log_analysis:
                 elements.append(Paragraph("6. Analyse technique", styles['heading1']))
 
@@ -929,8 +929,8 @@ class ReportGenerator:
                 elements.append(Spacer(1, 0.15 * inch))
 
             # 7. Problèmes détectés (seulement s'il y a vraiment des erreurs)
-            errors = analysis.get("errors", [])
-            warnings = analysis.get("warnings", [])
+            errors = analysis.get("analysis", {}).get("errors", [])
+            warnings = analysis.get("analysis", {}).get("warnings", [])
 
             # Filtrer les erreurs génériques qui ne sont pas vraiment des problèmes
             filtered_errors = [error for error in errors if
