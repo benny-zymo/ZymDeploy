@@ -12,6 +12,8 @@ import json
 import datetime
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+
+import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
@@ -636,7 +638,8 @@ class ReportGenerator:
                 ["Paramètre", "Valeur"],
                 ["Type de plaque", analysis.get("plate_type", "inconnu")],
                 ["Mode d'acquisition", analysis.get("acquisition_mode", "inconnu")],
-                ["Dossier de résultats", analysis.get("folder", "")]
+                ["Dossier de résultats", analysis.get("folder", "")],
+                ["Dossier de référence", analysis.get("reference_folder", "")],
             ]
 
             # Statut corrigé - utiliser le statut validé par l'utilisateur
@@ -665,8 +668,8 @@ class ReportGenerator:
                     ["Pente", str(round(statistics.get("slope", 0), 4))],
                     ["Ordonnée à l'origine", str(round(statistics.get("intercept", 0), 4))],
                     ["Coefficient de détermination (R²)", str(round(statistics.get("r2", 0), 4))],
-                    ["Nombre de valeurs aberrantes", str(statistics.get("outliers_count", 0))],
-                    ["Pourcentage de valeurs aberrantes", f"{round(statistics.get('outliers_percentage', 0), 2)}%"]
+                    #["Nombre de valeurs aberrantes", str(statistics.get("outliers_count", 0))],
+                    #["Pourcentage de valeurs aberrantes", f"{round(statistics.get('outliers_percentage', 0), 2)}%"]
                 ]
 
                 # Utiliser les largeurs de colonnes standard

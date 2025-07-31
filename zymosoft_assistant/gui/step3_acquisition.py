@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
                              QTableWidget, QTableWidgetItem, QHeaderView,
                              QCheckBox, QRadioButton, QGroupBox, QTextEdit,
                              QTreeWidget, QTreeWidgetItem, QButtonGroup, QDialog,
-                             QSplitter, QSizePolicy, QSpacerItem)
+                             QSplitter, QSizePolicy, QSpacerItem, QGridLayout)
 from PyQt5.QtCore import Qt, pyqtSignal, QVariant, pyqtSlot
 from PyQt5.QtGui import QPixmap, QFont
 
@@ -47,6 +47,7 @@ class SelectionBox(QPushButton):
         self.setCheckable(True)
         self.option_id = option_id
         self.setMinimumHeight(60)
+        # give a special background color opacity when hovered
         self.setStyleSheet(f"""
             QPushButton {{
                 border: 2px solid {COLOR_SCHEME.get('border', '#ddd')};
@@ -58,9 +59,13 @@ class SelectionBox(QPushButton):
                 font-weight: bold;
                 font-size: 11pt;
             }}
-            QPushButton:hover {{
+            QPushButton {{
                 border-color: {COLOR_SCHEME.get('primary_hover', '#0056b3')};
                 color: {COLOR_SCHEME.get('primary_hover', '#0056b3')};
+            }}
+            QPushButton:hover {{
+                background-color: rgba(0, 255, 0, 0.1);
+               
             }}
             QPushButton:checked {{
                 background-color: {COLOR_SCHEME.get('primary', '#007bff')};
@@ -504,8 +509,8 @@ class AcquisitionDetailsDialog(QDialog):
 
         comp = validation['comparison']
         comp_items = [
-            ("Pente (validation)", f"{comp.get('slope', 0):.4f}", 'slope'),
-            ("R² (validation)", f"{comp.get('r_value', 0):.4f}", 'r2'),
+            ("Pente", f"{comp.get('slope', 0):.4f}", 'slope'),
+            ("R²", f"{comp.get('r_value', 0):.4f}", 'r2'),
         ]
         for param, value, criteria_key in comp_items:
             row = self.stats_table.rowCount()
@@ -652,7 +657,7 @@ class Step3Acquisition(StepFrame):
 
         # Variables pour la configuration de validation
         self.do_repeta_sans_ref = False  # Toujours désactivé pour un déploiement
-        self.do_compare_to_ref = False  # =1 si mode expert, =0 si mode client
+        self.do_compare_to_ref = True  # =1 si mode expert, =0 si mode client
         self.do_compare_enzymo_to_ref = True  # Toujours activé
 
         # Initialisation des valeurs par défaut
@@ -785,7 +790,7 @@ class Step3Acquisition(StepFrame):
         main_splitter.addWidget(main_content_frame)
 
         # Indicateur de sous-étape
-        self.substep_indicator_label = QLabel("Étape 1/3: Configuration")
+        self.substep_indicator_label = QLabel("Configuration")
         self.substep_indicator_label.setStyleSheet("font-size: 14pt; font-weight: bold; margin-bottom: 10px;")
         self.substep_indicator_label.setAlignment(Qt.AlignCenter)
         main_content_layout.addWidget(self.substep_indicator_label)
@@ -958,7 +963,7 @@ class Step3Acquisition(StepFrame):
         Crée les widgets pour la sélection des résultats, avec un design amélioré.
         """
         # Description
-        description_label = QLabel("Sélectionnez les dossiers contenant les résultats de l'acquisition et (optionnellement) de référence.")
+        description_label = QLabel("Sélectionnez les dossiers contenant les résultats de l'acquisition et  de référence.")
         description_label.setWordWrap(True)
         self.selection_layout.addWidget(description_label)
         self.selection_layout.addSpacing(10)
@@ -969,7 +974,7 @@ class Step3Acquisition(StepFrame):
         self.results_folder_widget.path_selected.connect(self._on_results_folder_selected)
         folder_selection_layout.addWidget(self.results_folder_widget)
 
-        self.reference_folder_widget = FolderSelectionWidget("Dossier de référence (optionnel)")
+        self.reference_folder_widget = FolderSelectionWidget("Dossier de référence")
         self.reference_folder_widget.path_selected.connect(self._on_reference_folder_selected)
         folder_selection_layout.addWidget(self.reference_folder_widget)
         self.selection_layout.addLayout(folder_selection_layout)
@@ -2350,9 +2355,9 @@ class Step3Acquisition(StepFrame):
 
             # Création des items avec vérification des critères
             comp_items = [
-                ("Pente (validation)", f"{comp.get('slope', 0):.4f}", 'slope'),
-                ("Ordonnée à l'origine (validation)", f"{comp.get('intercept', 0):.4f}", 'intercept'),
-                ("R² (validation)", f"{comp.get('r_value', 0):.4f}", 'r2'),
+                ("Pente", f"{comp.get('slope', 0):.4f}", 'slope'),
+                ("Ordonnée à l'origine", f"{comp.get('intercept', 0):.4f}", 'intercept'),
+                ("R²", f"{comp.get('r_value', 0):.4f}", 'r2'),
                 ("Points hors tolérance", str(comp.get('nb_puits_loin_fit', 'N/A')), 'nb_puits_loin_fit'),
                 ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%", None),
                 ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%", None)
@@ -2850,7 +2855,7 @@ class Step3Acquisition(StepFrame):
             layout.addWidget(message_label)
 
             # Champ de commentaires
-            comments_label = QLabel("Commentaires (optionnel):")
+            comments_label = QLabel("Commentaires:")
             layout.addWidget(comments_label)
 
             comments_text = QTextEdit()
@@ -3030,6 +3035,12 @@ class Step3Acquisition(StepFrame):
 
             # Construire le dictionnaire de données pour le rapport
             report_data = {
+                'installation_id': self.main_window.session_data.get('installation_id', 'Inconnu'),
+                'acquisition_id': self.current_acquisition_id,
+                'plate_type': self.plate_type_var,
+                'acquisition_mode': self.acquisition_mode_var,
+                'folder' : self.results_folder_var,
+                'reference_folder': self.reference_folder_var,
                 'analysis': self.analysis_results,
                 'comments': self.comments_var,
                 'validated': validated_status

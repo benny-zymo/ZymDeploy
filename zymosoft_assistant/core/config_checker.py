@@ -312,6 +312,9 @@ class ConfigChecker:
                 "temperature_files": []
             }
 
+
+
+
             # Vérification des paramètres Interf et Reflecto - une config ne peut pas avoir les deux
             has_interf = False
             has_reflecto = False

@@ -544,10 +544,10 @@ border: none;
             self.prev_button.setEnabled(index > 0)
 
             # Disable the main 'Next' button only on Step 3, as it has its own navigation
-            if index == 2:
-                self.next_button.setEnabled(False)
-            else:
-                self.next_button.setEnabled(True)
+            #if index == 2:
+                # self.next_button.setEnabled(False)
+            #else:
+            self.next_button.setEnabled(True)
 
             if index == len(self.steps) - 1:
                 logger.debug("Dernière étape, bouton suivant devient 'Terminer'")
