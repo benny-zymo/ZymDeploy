@@ -211,25 +211,25 @@ def repeta_sans_ref_v1(directory_source,nom_plaque,nom_reconstruction,directory_
 
     csv_out_this_plate.close()
 
-    affiche_colormap_etude_general_v2(volume_mean_for_this_plate,nom_plaque+'volume_mean_for_this_plate on all iteration','jet',0,500)
+    #affiche_colormap_etude_general_v2(volume_mean_for_this_plate,nom_plaque+'volume_mean_for_this_plate on all iteration','jet',0,500)
     #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_mean_for_this_plate.jpg')
 
-    affiche_colormap_etude_general_v2(volume_std_for_this_plate,nom_plaque+'volume_std_for_this_plate on all iteration','jet',0,0)
+    #affiche_colormap_etude_general_v2(volume_std_for_this_plate,nom_plaque+'volume_std_for_this_plate on all iteration','jet',0,0)
     #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_std_for_this_plate.jpg')
 
-    affiche_colormap_etude_general_v2(volume_CV_for_this_plate,nom_plaque+'volume_CV_for_this_plate on all iteration','Reds',0,10)
+    #affiche_colormap_etude_general_v2(volume_CV_for_this_plate,nom_plaque+'volume_CV_for_this_plate on all iteration','Reds',0,10)
     #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_CV_for_this_plate.jpg')
 
-    affiche_colormap_etude_general_v2(volume_std_mean_for_this_plate,nom_plaque+'volume_std_mean_for_this_plate on all iteration','jet',0,0)
+    #affiche_colormap_etude_general_v2(volume_std_mean_for_this_plate,nom_plaque+'volume_std_mean_for_this_plate on all iteration','jet',0,0)
     #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'volume_std_mean_for_this_plate.jpg')
 
-    affiche_colormap_etude_general_v2(nb_dot_detecte_mean_for_this_plate,nom_plaque+'nb_dot_detecte_mean_for_this_plate on all iteration','jet',0,0)
+    #affiche_colormap_etude_general_v2(nb_dot_detecte_mean_for_this_plate,nom_plaque+'nb_dot_detecte_mean_for_this_plate on all iteration','jet',0,0)
     #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'nb_dot_detecte_mean_for_this_plate.jpg')
 
-    affiche_colormap_etude_general_v2(nb_dot_detecte_std_for_this_plate,nom_plaque+'nb_dot_detecte_std_for_this_plate on all iteration','jet',0,0)
+    #affiche_colormap_etude_general_v2(nb_dot_detecte_std_for_this_plate,nom_plaque+'nb_dot_detecte_std_for_this_plate on all iteration','jet',0,0)
     #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'nb_dot_detecte_std_for_this_plate.jpg')
 
-    affiche_colormap_etude_general_v2(porcent_dot_utile_mean_for_this_plate,nom_plaque+'porcent_dot_utile_mean_for_this_plate on all iteration','jet',0,0)
+    #affiche_colormap_etude_general_v2(porcent_dot_utile_mean_for_this_plate,nom_plaque+'porcent_dot_utile_mean_for_this_plate on all iteration','jet',0,0)
     #plt.savefig(directory_out_this_plate+'\\'+nom_plaque+'porcent_dot_utile_mean_for_this_plate.jpg')
 
 
@@ -635,19 +635,19 @@ def comparaison_ZC_to_ref_v1(nom_gp,chemin_intrument_1,type_intrument_1,chemin_i
     fichier_save.close()
 
 # présentation des différences calculées selon des colormaps    
-    affiche_colormap_etude_general(Matrix_volume_difference,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_difference','RdGy',np.nanmin(Matrix_volume_difference),np.nanmax(Matrix_volume_difference))
+    #affiche_colormap_etude_general(Matrix_volume_difference,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_difference','RdGy',np.nanmin(Matrix_volume_difference),np.nanmax(Matrix_volume_difference))
     #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_difference.jpg')
 
-    affiche_colormap_etude_general(Matrix_volume_difference_relative,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_difference en %','PuOr',-100,100)
+    #affiche_colormap_etude_general(Matrix_volume_difference_relative,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_difference en %','PuOr',-100,100)
     #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_difference_relative.jpg')
 
-    affiche_colormap_etude_general(Matrix_volume_ratio,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_ratio','Greens',np.nanmin(Matrix_volume_ratio),np.nanmax(Matrix_volume_ratio))
+    #affiche_colormap_etude_general(Matrix_volume_ratio,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\nMatrix_volume_ratio','Greens',np.nanmin(Matrix_volume_ratio),np.nanmax(Matrix_volume_ratio))
     #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_volume_ratio.jpg')
 
-    affiche_colormap_etude_general(Matrix_diametre_difference,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\n Matrix_diametre_difference','autumn',np.nanmin(Matrix_diametre_difference),np.nanmax(Matrix_diametre_difference))
+    #affiche_colormap_etude_general(Matrix_diametre_difference,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\n Matrix_diametre_difference','autumn',np.nanmin(Matrix_diametre_difference),np.nanmax(Matrix_diametre_difference))
     #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_diametre_difference.jpg')
 
-    affiche_colormap_etude_general(Matrix_diametre_difference_relative,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\n Matrix_diametre_difference_relative','cool',np.nanmin(Matrix_diametre_difference_relative),np.nanmax(Matrix_diametre_difference_relative))
+    #affiche_colormap_etude_general(Matrix_diametre_difference_relative,name_dossier_instrument_1+'\n'+type_intrument_1+' vs '+type_intrument_2+'\n Matrix_diametre_difference_relative','cool',np.nanmin(Matrix_diametre_difference_relative),np.nanmax(Matrix_diametre_difference_relative))
     #plt.savefig(directory_plaque_to_save+'\\'+name_dossier_to_save+'Matrix_diametre_difference_relative.jpg')
 
 # mise sous forme de vecteur des volumes et diamètres pour fiter     
@@ -772,16 +772,16 @@ def comparaison_ZC_to_ref_v1(nom_gp,chemin_intrument_1,type_intrument_1,chemin_i
     # merge_two_figure([directory_source_synthese_instrument_1,directory_source_synthese_instrument_2],name_dossier_instrument_1,['dot_map_cycle_730.png','dot_map_cycle_730.png'],directory_plaque_to_save)
 
 #    regénération des colormaps volumes et diamètres
-    affiche_colormap_etude_general(volume_instrument_1,'volumes_'+type_intrument_1,'jet',0,500)
+    #affiche_colormap_etude_general(volume_instrument_1,'volumes_'+type_intrument_1,'jet',0,500)
     # plt.savefig(directory_plaque_to_save+'\\volumes_'+type_intrument_1+'.jpg')
 
-    affiche_colormap_etude_general(volume_instrument_2,'volumes_'+type_intrument_2,'jet',0,500)
+    #affiche_colormap_etude_general(volume_instrument_2,'volumes_'+type_intrument_2,'jet',0,500)
     # plt.savefig(directory_plaque_to_save+'\\volumes_'+type_intrument_2+'.jpg')
 
-    affiche_colormap_etude_general(diametre_instrument_1,'diametres_'+type_intrument_1,'jet',15,50)
+    #affiche_colormap_etude_general(diametre_instrument_1,'diametres_'+type_intrument_1,'jet',15,50)
     # plt.savefig(directory_plaque_to_save+'\\diametres_'+type_intrument_1+'.jpg')
 
-    affiche_colormap_etude_general(diametre_instrument_2,'diametres_'+type_intrument_2,'jet',15,50)
+    #affiche_colormap_etude_general(diametre_instrument_2,'diametres_'+type_intrument_2,'jet',15,50)
     # plt.savefig(directory_plaque_to_save+'\\diametres_'+type_intrument_2+'.jpg')
 
     # merge_two_figure([directory_plaque_to_save,directory_plaque_to_save],name_dossier_instrument_1,['diametres_'+type_intrument_1+'.jpg','diametres_'+type_intrument_2+'.jpg'],directory_plaque_to_save)
@@ -1044,10 +1044,10 @@ def comparaison_ZC_to_ref_v1_nanofilm(nom_gp,chemin_intrument_1,type_intrument_1
     # merge_two_figure([directory_source_synthese_instrument_1,directory_source_synthese_instrument_2],name_dossier_instrument_1,['stat_litteral_intensity_730_colormap.png','stat_litteral_intensity_730_colormap.png'],directory_plaque_to_save)
 
 #    regénération des colormaps volumes et diamètres
-    affiche_colormap_etude_general(thickness_instrument_1,'épaisseur_'+type_intrument_1,'jet',0,200)
+    #affiche_colormap_etude_general(thickness_instrument_1,'épaisseur_'+type_intrument_1,'jet',0,200)
     # plt.savefig(directory_plaque_to_save+'\\epaisseur_'+type_intrument_1+'.jpg')
 
-    affiche_colormap_etude_general(thickness_instrument_2,'épaisseur_'+type_intrument_2,'jet',0,200)
+    #affiche_colormap_etude_general(thickness_instrument_2,'épaisseur_'+type_intrument_2,'jet',0,200)
     # plt.savefig(directory_plaque_to_save+'\\epaisseur_'+type_intrument_2+'.jpg')
 
     # merge_two_figure([directory_plaque_to_save,directory_plaque_to_save],name_dossier_instrument_1,['epaisseur_'+type_intrument_1+'.jpg','epaisseur_'+type_intrument_2+'.jpg'],directory_plaque_to_save)

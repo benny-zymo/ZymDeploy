@@ -313,7 +313,7 @@ class ReportGenerator:
         total_width = letter[0] - doc.leftMargin - doc.rightMargin
 
         # En-tête du rapport
-        self._create_report_header(elements, "Rapport de vérification de l'installation ZymUpload", total_width)
+        self._create_report_header(elements, "Rapport de vérification de l'installation ZymDeploy", total_width)
 
         # Date
         elements.append(Paragraph(f"Date : {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", styles['normal']))
@@ -322,7 +322,7 @@ class ReportGenerator:
         # Section 1 : Résumé global
         elements.append(Paragraph("1. Résumé global", styles['heading1']))
         elements.append(Paragraph(
-            "Ce rapport présente les résultats détaillés des vérifications de l'installation ZymUpload, "
+            "Ce rapport présente les résultats détaillés des vérifications de l'installation ZymDeploy, "
             "incluant la structure des dossiers et la validité des fichiers de configuration principaux.",
             styles['normal']))
         elements.append(Spacer(1, 0.2 * cm))
@@ -576,7 +576,7 @@ class ReportGenerator:
 
         # Pied de page
         elements.append(Spacer(1, 0.5 * cm))
-        elements.append(Paragraph("Rapport généré automatiquement par ZymUpload", styles['italic']))
+        elements.append(Paragraph("Rapport généré automatiquement par ZymDeploy", styles['italic']))
 
         # Génération du PDF
         doc.build(elements)
@@ -960,7 +960,7 @@ class ReportGenerator:
 
             # Pied de page
             elements.append(Spacer(1, 0.5 * inch))
-            elements.append(Paragraph("Rapport généré automatiquement par ZymUpload", styles['italic']))
+            elements.append(Paragraph("Rapport généré automatiquement par ZymDeploy", styles['italic']))
 
             # Génération du PDF
             doc.build(elements)
@@ -1024,7 +1024,7 @@ class ReportGenerator:
 
                 # Pied de page
                 elements.append(Spacer(1, 0.5 * inch))
-                elements.append(Paragraph("Rapport généré automatiquement par ZymUpload", styles['italic']))
+                elements.append(Paragraph("Rapport généré automatiquement par ZymDeploy", styles['italic']))
 
                 # Génération du PDF
                 doc.build(elements)
@@ -1389,7 +1389,7 @@ class ReportGenerator:
 
         # Pied de page
         elements.append(Spacer(1, 0.5 * inch))
-        elements.append(Paragraph("Rapport généré automatiquement par ZymUpload", styles['italic']))
+        elements.append(Paragraph("Rapport généré automatiquement par ZymDeploy", styles['italic']))
 
         # Génération du PDF
         doc.build(elements)

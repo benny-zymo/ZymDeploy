@@ -9,9 +9,12 @@ import sys
 import os
 import logging
 import subprocess
+
+import matplotlib
 #import pkg_resources
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from pip._internal.metadata import pkg_resources
+matplotlib.use('Agg')
 
 # Configuration du logging
 logging.basicConfig(
@@ -98,6 +101,17 @@ def main():
         icon_path = resource_path("assets\\icons\\icon.png")
         APP_CONFIG['icon_path'] = icon_path
         logger.info(f"Chemin de l'icône de l'application: {icon_path}")
+
+        # Vérifier si le fichier d'icône existe
+        if not os.path.exists(icon_path):
+            logger.warning(f"Fichier d'icône introuvable: {icon_path}")
+            # Essayer avec l'icône .ico comme alternative
+            ico_path = resource_path("assets\\icons\\icon.ico")
+            if os.path.exists(ico_path):
+                logger.info(f"Utilisation de l'icône alternative: {ico_path}")
+                APP_CONFIG['icon_path'] = ico_path
+            else:
+                logger.warning(f"Icône alternative introuvable: {ico_path}")
 
         # Création de l'application Qt
         app = QApplication(sys.argv)

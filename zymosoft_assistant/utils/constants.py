@@ -7,6 +7,26 @@ Module de constantes pour l'assistant d'installation ZymoSoft
 
 import os
 from pathlib import Path
+import sys
+
+
+def resource_path(relative_path):
+    """
+    Retourne le chemin absolu d'une ressource, compatible PyInstaller et exécution normale.
+    Exemple d'appel : resource_path("assets/icons/icon.png")
+    """
+    try:
+        # Si exécuté comme un fichier compilé par PyInstaller
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+            return os.path.join(base_path, "zymosoft_assistant", relative_path)
+        else:
+            # Si exécuté normalement
+            base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            return os.path.join(base_path, relative_path)
+    except Exception as e:
+        print(f"Error resolving resource path: {e}")
+        return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), relative_path)
 
 # Chemins de base
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,7 +65,7 @@ APP_CONFIG = {
     'window_height': 1000,
     'min_width': 640,
     'min_height': 480,
-    'icon_path': None  # À définir si un icône est disponible
+    'icon_path': resource_path("assets/icons/icon.png"),
 }
 
 # Étapes de l'assistant

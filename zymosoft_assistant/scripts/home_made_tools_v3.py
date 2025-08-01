@@ -6,6 +6,8 @@ Created on Thu Jul  2 14:02:56 2020
 """
 
 from tkinter import *
+
+import matplotlib
 from PIL import Image
 import numpy as np
 import pandas
@@ -16,6 +18,7 @@ import matplotlib.colors as colors
 import os
 
 alphabet_majuscule = string.ascii_uppercase
+
 
 
 def gen_color(cmap,n,reverse=False):
