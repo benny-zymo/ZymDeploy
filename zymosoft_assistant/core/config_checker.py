@@ -89,7 +89,9 @@ class ConfigChecker:
             "zymocubectrl_exists": False,
             "zymosoft_exists": False,
             "workers_exists": False,
-            "version_match": False
+            "version_match": False,
+            "zymosoft_version": self.version,
+            "exe_version": "N/A"
         }
 
         # Vérification des dossiers principaux
@@ -125,6 +127,7 @@ class ConfigChecker:
             # Vérification de la version de ZymoSoft.exe
             if results["zymosoft_exists"]:
                 exe_version = get_exe_version(zymosoft_path)
+                results["exe_version"] = exe_version if exe_version else "N/A"
 
                 if exe_version and exe_version.startswith(self.version):
                     # afficher les deux versions

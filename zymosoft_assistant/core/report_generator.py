@@ -334,6 +334,12 @@ class ReportGenerator:
         else:
             elements.append(
                 Paragraph("Statut global : <font color='red'>✗ Installation non valide</font>", styles['normal']))
+
+        # Version de Zymosoft
+        structure_checks = checks.get("structure", {})
+        zymosoft_version = structure_checks.get('zymosoft_version', 'N/A')
+        elements.append(Paragraph(f"Version ZymoSoft : <b>{zymosoft_version}</b>", styles['normal']))
+
         elements.append(Spacer(1, 0.2 * cm))
 
         # Section 2 : Erreurs et avertissements
@@ -703,8 +709,6 @@ class ReportGenerator:
                     ("Ordonnée à l'origine", comp.get("intercept", 0), "intercept"),
                     ("R²", comp.get("r_value", 0), "r2"),
                     ("Points hors tolérance", comp.get("nb_puits_loin_fit", "N/A"), "nb_puits_loin_fit"),
-                    ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%", None),
-                    ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%", None)
                 ]
 
                 # Création des lignes du tableau avec vérification des critères
@@ -768,7 +772,7 @@ class ReportGenerator:
 
                     # Préparation des données pour le tableau avec nouveaux en-têtes
                     well_results_data = [
-                        ["Activité (U/mL)", "Zone", "ZU référence", "ZU déploiement", "Différence (point de %)",
+                        ["Activité (U/mL)", "Zone", "CV référence", "CV déploiement", "Différence (point de %)",
                          "Validité"]]
 
                     # Limiter à 20 lignes maximum pour éviter un rapport trop long

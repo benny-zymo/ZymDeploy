@@ -32,6 +32,7 @@ from zymosoft_assistant.core.report_generator import ReportGenerator
 from zymosoft_assistant.scripts.Routine_VALIDATION_ZC_18022025 import compare_enzymo_2_ref, comparaison_ZC_to_ref_v1, \
     comparaison_ZC_to_ref_v1_nanofilm
 from zymosoft_assistant.scripts.getDatasFromWellResults import processWellResults, calculateLODLOQComparison
+from zymosoft_assistant.core.file_validator import FileValidator
 from zymosoft_assistant.scripts.processAcquisitionLog import analyzeLogFile, generateLogAnalysisReport
 from .step_frame import StepFrame
 
@@ -65,7 +66,7 @@ class SelectionBox(QPushButton):
             }}
             QPushButton:hover {{
                 background-color: rgba(0, 255, 0, 0.1);
-               
+
             }}
             QPushButton:checked {{
                 background-color: {COLOR_SCHEME.get('primary', '#007bff')};
@@ -121,6 +122,8 @@ class FolderSelectionWidget(QFrame):
         title_label.setStyleSheet("font-weight: bold;")
         layout.addWidget(title_label)
 
+        errors = []
+
         self.path_label = QLabel("Aucun dossier sélectionné")
         self.path_label.setStyleSheet(f"""
             QLabel {{
@@ -137,6 +140,19 @@ class FolderSelectionWidget(QFrame):
         self.path_label.setWordWrap(True)
         layout.addWidget(self.path_label)
 
+        # Ajout d'un label pour afficher les erreurs
+        self.error_label = QLabel("")
+        self.error_label.setStyleSheet(f"""
+            QLabel {{
+                color: {COLOR_SCHEME.get('error_dark', '#721c24')};
+                font-size: 10pt;
+                margin-top: 5px;
+            }}
+        """)
+        self.error_label.setWordWrap(True)
+        self.error_label.setVisible(False)
+        layout.addWidget(self.error_label)
+
         self.browse_button = QPushButton("Parcourir...")
         self.browse_button.clicked.connect(self.browse_folder)
         layout.addWidget(self.browse_button, 0, Qt.AlignRight)
@@ -150,20 +166,63 @@ class FolderSelectionWidget(QFrame):
     def set_path(self, path):
         self.path = path
         self.path_label.setText(path)
+        # The validation will set the color, so we just reset to a neutral state here
         self.path_label.setStyleSheet(f"""
             QLabel {{
                 padding: 15px;
-                border: 2px solid {COLOR_SCHEME.get('success', '#28a745')};
+                border: 2px dashed {COLOR_SCHEME.get('border', '#ddd')};
                 border-radius: 8px;
-                background-color: {COLOR_SCHEME.get('success_light', '#d4edda')};
-                color: {COLOR_SCHEME.get('success_dark', '#155724')};
+                background-color: {COLOR_SCHEME.get('background_light', '#f8f9fa')};
+                color: {COLOR_SCHEME.get('text_secondary', '#666')};
                 font-size: 11pt;
-                font-weight: bold;
             }}
         """)
+        # Reset error label when a new path is set
+        self.error_label.setVisible(False)
+        self.error_label.setText("")
 
     def get_path(self):
         return self.path
+
+    def set_validity(self, is_valid, errors=None):
+        if is_valid:
+            self.path_label.setStyleSheet(f"""
+                QLabel {{
+                    padding: 15px;
+                    border: 2px solid {COLOR_SCHEME.get('success', '#28a745')};
+                    border-radius: 8px;
+                    background-color: {COLOR_SCHEME.get('success_light', '#d4edda')};
+                    color: {COLOR_SCHEME.get('success_dark', '#155724')};
+                    font-size: 11pt;
+                    font-weight: bold;
+                }}
+            """)
+            self.path_label.setToolTip("")
+            # Cacher le label d'erreur quand tout est valide
+            self.error_label.setVisible(False)
+            self.error_label.setText("")
+        else:
+            self.path_label.setStyleSheet(f"""
+                QLabel {{
+                    padding: 15px;
+                    border: 2px solid {COLOR_SCHEME.get('error', '#dc3545')};
+                    border-radius: 8px;
+                    background-color: {COLOR_SCHEME.get('error_light', '#f8d7da')};
+                    color: {COLOR_SCHEME.get('error_dark', '#721c24')};
+                    font-size: 11pt;
+                    font-weight: bold;
+                }}
+            """)
+            # Mettre à jour le tooltip et le label d'erreur
+            if errors:
+                error_text = "\n".join(errors)
+                self.path_label.setToolTip(error_text)
+                self.error_label.setText(error_text)
+                self.error_label.setVisible(True)
+            else:
+                self.path_label.setToolTip("Dossier invalide.")
+                self.error_label.setText("Dossier invalide.")
+                self.error_label.setVisible(True)
 
 
 class VerticalTabWidget(QWidget):
@@ -411,14 +470,14 @@ class AcquisitionDetailsDialog(QDialog):
         well_results_tab = QWidget()
         well_results_layout = QVBoxLayout(well_results_tab)
         self.well_results_table = QTableWidget(0, 6)
-        self.well_results_table.setHorizontalHeaderLabels(["Activité", "Area", "Acquisition", "Référence", "Diff", "Valide"])
+        self.well_results_table.setHorizontalHeaderLabels(["Activité (U/mL)", "Zone", "CV déploiement", "CV référence", "Différence (point de %)", "Validité"])
         well_results_layout.addWidget(self.well_results_table)
-        self.info_stats_tabs.add_tab(well_results_tab, "Comparaison WellResults")
+        self.info_stats_tabs.add_tab(well_results_tab, "Comparaison des gammes de calibration")
 
         lod_loq_tab = QWidget()
         lod_loq_layout = QVBoxLayout(lod_loq_tab)
         self.lod_loq_table = QTableWidget(0, 9)
-        self.lod_loq_table.setHorizontalHeaderLabels(["Area", "LOD_Ref", "LOD_Acq", "LOQ_Ref", "LOQ_Acq", "Diff LOD", "Diff LOQ", "Valide LOD", "Valide LOQ"])
+        self.lod_loq_table.setHorizontalHeaderLabels(["Zone", "LOD Ref (ZU)", "LOD déploiement (ZU)", "LOQ Ref (ZU)", "LOQ déploiement (ZU)", "Diff LOD (point de %)", "Diff LOQ (point de %)", "Valide LOD", "Valide LOQ"])
         lod_loq_layout.addWidget(self.lod_loq_table)
         self.info_stats_tabs.add_tab(lod_loq_tab, "Comparaison LOD/LOQ")
 
@@ -1113,10 +1172,10 @@ class Step3Acquisition(StepFrame):
         self.well_results_info_label.setWordWrap(True)
         well_results_layout.addWidget(self.well_results_info_label)
         self.well_results_table = QTableWidget(0, 6)
-        self.well_results_table.setHorizontalHeaderLabels(["Activité", "Area", "Acquisition", "Référence", "Diff", "Valide"])
+        self.well_results_table.setHorizontalHeaderLabels(["Activité (U/mL)", "Zone", "CV déploiement", "CV référence", "Différence (point de %)", "Validité"])
         self.well_results_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         well_results_layout.addWidget(self.well_results_table)
-        self.well_results_tab_index = self.info_stats_tabs.add_tab(well_results_tab, "Comparaison WellResults")
+        self.well_results_tab_index = self.info_stats_tabs.add_tab(well_results_tab, "Comparaison des gammes de calibration")
 
         # Onglet Comparaison LOD/LOQ
         lod_loq_tab = QWidget()
@@ -1125,7 +1184,7 @@ class Step3Acquisition(StepFrame):
         self.lod_loq_info_label.setWordWrap(True)
         lod_loq_layout.addWidget(self.lod_loq_info_label)
         self.lod_loq_table = QTableWidget(0, 9)
-        self.lod_loq_table.setHorizontalHeaderLabels(["Area", "LOD_Ref", "LOD_Acq", "LOQ_Ref", "LOQ_Acq", "Diff LOD", "Diff LOQ", "Valide LOD", "Valide LOQ"])
+        self.lod_loq_table.setHorizontalHeaderLabels(["Zone", "LOD Ref (ZU)", "LOD déploiement (ZU)", "LOQ Ref (ZU)", "LOQ déploiement (ZU)", "Diff LOD (point de %)", "Diff LOQ (point de %)", "Valide LOD", "Valide LOQ"])
         self.lod_loq_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         lod_loq_layout.addWidget(self.lod_loq_table)
         self.lod_loq_tab_index = self.info_stats_tabs.add_tab(lod_loq_tab, "Comparaison LOD/LOQ")
@@ -1296,6 +1355,9 @@ class Step3Acquisition(StepFrame):
         if checked:
             self.plate_type_var = box.get_id()
             logger.info(f"Type de plaque sélectionné: {self.plate_type_var}")
+            # Revalider les dossiers si un chemin a été sélectionné
+            if self.results_folder_var or self.reference_folder_var:
+                self._validate_folders()
 
     def _on_acquisition_mode_changed(self, checked, box):
         """
@@ -1304,13 +1366,57 @@ class Step3Acquisition(StepFrame):
         if checked:
             self.acquisition_mode_var = box.get_id()
             logger.info(f"Mode d'acquisition sélectionné: {self.acquisition_mode_var}")
+            # Revalider les dossiers si un chemin a été sélectionné
+            if self.results_folder_var or self.reference_folder_var:
+                self._validate_folders()
 
     def _on_results_folder_selected(self, path):
         self.results_folder_var = path
-        self._update_nav_buttons()
+        self._validate_folders()
 
     def _on_reference_folder_selected(self, path):
         self.reference_folder_var = path
+        self._validate_folders()
+
+    def _validate_folders(self):
+        """
+        Valide les dossiers de résultats et de référence et met à jour l'interface.
+        """
+        # Réinitialiser les erreurs
+        results_errors = []
+        ref_errors = []
+
+        is_expert = self.acquisition_mode_var == 'expert'
+        plate_type = self.plate_type_var
+
+        # Validation du dossier de résultats
+        if self.results_folder_var:
+            results_validation = FileValidator.validate_acquisition_folder(self.results_folder_var, is_expert, plate_type)
+            if not results_validation["is_valid"]:
+                results_errors.extend(results_validation["errors"])
+
+        # Validation du dossier de référence
+        if self.reference_folder_var:
+            ref_validation = FileValidator.validate_acquisition_folder(self.reference_folder_var, is_expert, plate_type)
+            if not ref_validation["is_valid"]:
+                ref_errors.extend(ref_validation["errors"])
+
+        # Vérifier si les dossiers sont identiques
+        if self.results_folder_var and self.reference_folder_var and \
+           os.path.normpath(self.results_folder_var) == os.path.normpath(self.reference_folder_var):
+            error_msg = "Le dossier d'acquisition et de référence ne peuvent pas être identiques."
+            if error_msg not in results_errors:
+                results_errors.append(error_msg)
+            if error_msg not in ref_errors:
+                ref_errors.append(error_msg)
+
+        # Mettre à jour l'affichage
+        if self.results_folder_var:
+            self.results_folder_widget.set_validity(len(results_errors) == 0, results_errors)
+
+        if self.reference_folder_var:
+            self.reference_folder_widget.set_validity(len(ref_errors) == 0, ref_errors)
+
         self._update_nav_buttons()
 
     def _on_compare_to_ref_toggled(self, checked):
@@ -1319,6 +1425,7 @@ class Step3Acquisition(StepFrame):
         """
         try:
             self.do_compare_to_ref = checked
+            self._validate_folders()  # Re-valider les dossiers
             logger.info(f"Option de comparaison aux références: {checked}")
         except Exception as e:
             logger.error(f"Erreur dans _on_compare_to_ref_toggled: {str(e)}", exc_info=True)
@@ -1329,106 +1436,10 @@ class Step3Acquisition(StepFrame):
         """
         try:
             self.do_compare_enzymo_to_ref = checked
+            self._validate_folders()  # Re-valider les dossiers
             logger.info(f"Option de comparaison des données enzymatiques: {checked}")
         except Exception as e:
             logger.error(f"Erreur dans _on_compare_enzymo_to_ref_toggled: {str(e)}", exc_info=True)
-
-    # Folder validation methods
-    def _check_results_folder(self, folder):
-        """
-        Vérifie le contenu du dossier de résultats
-        """
-        try:
-            if not folder or not os.path.exists(folder):
-                if self.folder_info_label:
-                    self.folder_info_label.setText("Dossier non valide ou inexistant.")
-                return
-
-            files = os.listdir(folder)
-            csv_files = [f for f in files if f.lower().endswith('.csv')]
-
-            if not csv_files:
-                if self.folder_info_label:
-                    self.folder_info_label.setText("Aucun fichier CSV trouvé dans le dossier.")
-                return
-
-            if self.folder_info_label:
-                self.folder_info_label.setText(f"Dossier valide. {len(csv_files)} fichiers CSV trouvés.")
-            logger.info(f"Dossier valide: {folder}, {len(csv_files)} fichiers CSV trouvés")
-
-            self._update_nav_buttons()
-        except Exception as e:
-            if self.folder_info_label:
-                self.folder_info_label.setText(f"Erreur lors de la vérification du dossier: {str(e)}")
-            logger.error(f"Erreur dans _check_results_folder: {str(e)}", exc_info=True)
-
-    def _check_reference_folder(self, folder):
-        """
-        Vérifie le contenu du dossier de référence
-        """
-        try:
-            if not folder or not os.path.exists(folder):
-                if self.ref_folder_info_label:
-                    self.ref_folder_info_label.setText("Dossier non valide ou inexistant.")
-                return
-
-            files = os.listdir(folder)
-            csv_files = [f for f in files if f.lower().endswith('.csv')]
-            excel_files = [f for f in files if f.lower().endswith('.xlsx')]
-
-            if not csv_files and not excel_files:
-                if self.ref_folder_info_label:
-                    self.ref_folder_info_label.setText("Aucun fichier CSV ou Excel trouvé dans le dossier.")
-                return
-
-            if self.ref_folder_info_label:
-                self.ref_folder_info_label.setText(
-                    f"Dossier valide. {len(csv_files)} fichiers CSV et {len(excel_files)} fichiers Excel trouvés.")
-            logger.info(
-                f"Dossier de référence valide: {folder}, {len(csv_files)} fichiers CSV et {len(excel_files)} fichiers Excel trouvés")
-
-            self._update_nav_buttons()
-        except Exception as e:
-            if self.ref_folder_info_label:
-                self.ref_folder_info_label.setText(f"Erreur lors de la vérification du dossier: {str(e)}")
-            logger.error(f"Erreur dans _check_reference_folder: {str(e)}", exc_info=True)
-
-    # Browse folder methods
-    def _browse_results_folder(self):
-        """
-        Ouvre une boîte de dialogue pour sélectionner le dossier de résultats
-        """
-        try:
-            folder = QFileDialog.getExistingDirectory(
-                self.widget,
-                "Sélectionner le dossier de résultats d'acquisition"
-            )
-            if folder:
-                self.results_folder_var = folder
-                if self.folder_entry:
-                    self.folder_entry.setText(folder)
-                self._check_results_folder(folder)
-        except Exception as e:
-            logger.error(f"Erreur dans _browse_results_folder: {str(e)}", exc_info=True)
-            QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue :\n{str(e)}")
-
-    def _browse_reference_folder(self):
-        """
-        Ouvre une boîte de dialogue pour sélectionner le dossier de référence
-        """
-        try:
-            folder = QFileDialog.getExistingDirectory(
-                self.widget,
-                "Sélectionner le dossier de référence"
-            )
-            if folder:
-                self.reference_folder_var = folder
-                if self.ref_folder_entry:
-                    self.ref_folder_entry.setText(folder)
-                self._check_reference_folder(folder)
-        except Exception as e:
-            logger.error(f"Erreur dans _browse_reference_folder: {str(e)}", exc_info=True)
-            QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue :\n{str(e)}")
 
     # Analysis methods
     def _analyze_results(self):
@@ -2804,10 +2815,14 @@ class Step3Acquisition(StepFrame):
                 self.next_substep_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
             elif current_index == 1:  # Page de Sélection des résultats
                 self.next_substep_button.setText("Analyser les résultats")
-                results_folder_valid = bool(self.results_folder_var and os.path.exists(self.results_folder_var))
+                results_folder_valid = bool(self.results_folder_var and self.results_folder_widget.path_label.toolTip() == "")
                 reference_folder_required = self.do_compare_to_ref or self.do_compare_enzymo_to_ref
-                reference_folder_valid = bool(self.reference_folder_var and os.path.exists(self.reference_folder_var))
-                can_analyze = results_folder_valid and (not reference_folder_required or reference_folder_valid)
+
+                can_analyze = results_folder_valid
+                if reference_folder_required:
+                    reference_folder_valid = bool(self.reference_folder_var and self.reference_folder_widget.path_label.toolTip() == "")
+                    can_analyze = can_analyze and reference_folder_valid
+
                 self.next_substep_button.setEnabled(can_analyze)
                 if can_analyze:
                     self.next_substep_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
@@ -3226,5 +3241,3 @@ class Step3Acquisition(StepFrame):
             if name in data.index:
                 return name
         return None
-
-

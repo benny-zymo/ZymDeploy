@@ -137,28 +137,7 @@ class Step1Info(StepFrame):
         actions_layout.setSpacing(SPACING_MEDIUM)
         actions_layout.setContentsMargins(0, SPACING_LARGE, 0, 0)
 
-        # Bouton charger informations précédentes
-        load_button = QPushButton("📁 Charger informations précédentes")
-        load_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #F8F9FA;
-                color: {COLOR_SCHEME['primary']};
-                border: 2px solid {COLOR_SCHEME['primary']};
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-size: 11pt;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: {COLOR_SCHEME['primary']};
-                color: white;
-            }}
-            QPushButton:pressed {{
-                background-color: {COLOR_SCHEME['primary_pressed']};
-            }}
-        """)
-        load_button.clicked.connect(self.load_previous_info)
-        actions_layout.addWidget(load_button)
+
 
         actions_layout.addStretch(1)
         self.layout.addLayout(actions_layout)
@@ -308,35 +287,3 @@ class Step1Info(StepFrame):
 
         logger.info("Étape 1 réinitialisée")
 
-    def load_previous_info(self):
-        """
-        Charge les informations d'une session précédente
-        """
-        file_path, _ = QFileDialog.getOpenFileName(
-            self.widget,
-            "Charger informations client",
-            "",
-            "Fichiers JSON (*.json);;Tous les fichiers (*.*)"
-        )
-
-        if not file_path:
-            return
-
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            if "client_info" in data:
-                client_info = data["client_info"]
-
-                self.client_name_edit.setText(client_info.get("name", ""))
-                self.cs_responsible_edit.setText(client_info.get("cs_responsible", ""))
-                self.instrumentation_responsible_edit.setText(client_info.get("instrumentation_responsible", ""))
-
-                QMessageBox.information(self.widget, "Chargement", "Informations client chargées avec succès.")
-                logger.info(f"Informations client chargées depuis {file_path}")
-            else:
-                QMessageBox.warning(self.widget, "Chargement", "Aucune information client trouvée dans le fichier.")
-        except Exception as e:
-            logger.error(f"Erreur lors du chargement des informations client: {str(e)}", exc_info=True)
-            QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue lors du chargement:\n{str(e)}")
