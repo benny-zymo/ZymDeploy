@@ -8,6 +8,7 @@ Module de validation des fichiers ZymoSoft
 import os
 import logging
 import configparser
+import string
 from typing import Dict, Any, List, Tuple, Set
 from pathlib import Path
 
@@ -457,7 +458,7 @@ class FileValidator:
         return results
 
     @staticmethod
-    def validate_acquisition_folder(folder_path: str, is_expert_mode: bool) -> Dict[str, Any]:
+    def validate_acquisition_folder(folder_path: str, is_expert_mode: bool, plate_type : string) -> Dict[str, Any]:
         """
         Valide le contenu d'un dossier de résultats d'acquisition.
 
@@ -467,6 +468,9 @@ class FileValidator:
 
         Returns:
             Dictionnaire avec les résultats de validation.
+            :param folder_path:
+            :param is_expert_mode:
+            :param plate_type:
         """
         errors = []
 
@@ -476,7 +480,7 @@ class FileValidator:
 
         # 1. Vérification du sous-dossier "Image" en mode expert
         if is_expert_mode:
-            image_folder_path = os.path.join(folder_path, "Image")
+            image_folder_path = os.path.join(folder_path, "Images")
             if not os.path.isdir(image_folder_path):
                 errors.append("Mode expert: Le dossier doit contenir un sous-dossier 'Image'.")
 
@@ -498,6 +502,11 @@ class FileValidator:
 
                     if not is_layer and not is_dot:
                         errors.append('Le fichier .zym ne contient pas de profil valide (profil="Layer" ou profil="Dot").')
+                    elif is_layer and plate_type != "nanofilm":
+                        errors.append('Le fichier .zym contient un profil "Layer" mais le profil choisis est "Micro Depot".')
+                    elif is_dot and plate_type != "micro_depot":
+                        errors.append('Le fichier .zym contient un profil "Dot" mais le profil choisis est "Nanofilm" .')
+
 
             except Exception as e:
                 errors.append(f"Erreur de lecture du fichier .zym: {e}")

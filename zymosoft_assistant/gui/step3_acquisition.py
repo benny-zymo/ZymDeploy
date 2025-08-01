@@ -66,7 +66,7 @@ class SelectionBox(QPushButton):
             }}
             QPushButton:hover {{
                 background-color: rgba(0, 255, 0, 0.1);
-               
+
             }}
             QPushButton:checked {{
                 background-color: {COLOR_SCHEME.get('primary', '#007bff')};
@@ -122,6 +122,8 @@ class FolderSelectionWidget(QFrame):
         title_label.setStyleSheet("font-weight: bold;")
         layout.addWidget(title_label)
 
+        errors = []
+
         self.path_label = QLabel("Aucun dossier sélectionné")
         self.path_label.setStyleSheet(f"""
             QLabel {{
@@ -137,6 +139,19 @@ class FolderSelectionWidget(QFrame):
         self.path_label.setMinimumHeight(80)
         self.path_label.setWordWrap(True)
         layout.addWidget(self.path_label)
+
+        # Ajout d'un label pour afficher les erreurs
+        self.error_label = QLabel("")
+        self.error_label.setStyleSheet(f"""
+            QLabel {{
+                color: {COLOR_SCHEME.get('error_dark', '#721c24')};
+                font-size: 10pt;
+                margin-top: 5px;
+            }}
+        """)
+        self.error_label.setWordWrap(True)
+        self.error_label.setVisible(False)
+        layout.addWidget(self.error_label)
 
         self.browse_button = QPushButton("Parcourir...")
         self.browse_button.clicked.connect(self.browse_folder)
@@ -162,6 +177,9 @@ class FolderSelectionWidget(QFrame):
                 font-size: 11pt;
             }}
         """)
+        # Reset error label when a new path is set
+        self.error_label.setVisible(False)
+        self.error_label.setText("")
 
     def get_path(self):
         return self.path
@@ -180,6 +198,9 @@ class FolderSelectionWidget(QFrame):
                 }}
             """)
             self.path_label.setToolTip("")
+            # Cacher le label d'erreur quand tout est valide
+            self.error_label.setVisible(False)
+            self.error_label.setText("")
         else:
             self.path_label.setStyleSheet(f"""
                 QLabel {{
@@ -192,10 +213,16 @@ class FolderSelectionWidget(QFrame):
                     font-weight: bold;
                 }}
             """)
+            # Mettre à jour le tooltip et le label d'erreur
             if errors:
-                self.path_label.setToolTip("\n".join(errors))
+                error_text = "\n".join(errors)
+                self.path_label.setToolTip(error_text)
+                self.error_label.setText(error_text)
+                self.error_label.setVisible(True)
             else:
                 self.path_label.setToolTip("Dossier invalide.")
+                self.error_label.setText("Dossier invalide.")
+                self.error_label.setVisible(True)
 
 
 class VerticalTabWidget(QWidget):
@@ -443,14 +470,14 @@ class AcquisitionDetailsDialog(QDialog):
         well_results_tab = QWidget()
         well_results_layout = QVBoxLayout(well_results_tab)
         self.well_results_table = QTableWidget(0, 6)
-        self.well_results_table.setHorizontalHeaderLabels(["Activité", "Area", "Acquisition", "Référence", "Diff", "Valide"])
+        self.well_results_table.setHorizontalHeaderLabels(["Activité (U/mL)", "Zone", "CV déploiement", "CV référence", "Différence (point de %)", "Validité"])
         well_results_layout.addWidget(self.well_results_table)
-        self.info_stats_tabs.add_tab(well_results_tab, "Comparaison WellResults")
+        self.info_stats_tabs.add_tab(well_results_tab, "Comparaison des gammes de calibration")
 
         lod_loq_tab = QWidget()
         lod_loq_layout = QVBoxLayout(lod_loq_tab)
         self.lod_loq_table = QTableWidget(0, 9)
-        self.lod_loq_table.setHorizontalHeaderLabels(["Area", "LOD_Ref", "LOD_Acq", "LOQ_Ref", "LOQ_Acq", "Diff LOD", "Diff LOQ", "Valide LOD", "Valide LOQ"])
+        self.lod_loq_table.setHorizontalHeaderLabels(["Zone", "LOD Ref (ZU)", "LOD déploiement (ZU)", "LOQ Ref (ZU)", "LOQ déploiement (ZU)", "Diff LOD (point de %)", "Diff LOQ (point de %)", "Valide LOD", "Valide LOQ"])
         lod_loq_layout.addWidget(self.lod_loq_table)
         self.info_stats_tabs.add_tab(lod_loq_tab, "Comparaison LOD/LOQ")
 
@@ -1145,10 +1172,10 @@ class Step3Acquisition(StepFrame):
         self.well_results_info_label.setWordWrap(True)
         well_results_layout.addWidget(self.well_results_info_label)
         self.well_results_table = QTableWidget(0, 6)
-        self.well_results_table.setHorizontalHeaderLabels(["Activité", "Area", "Acquisition", "Référence", "Diff", "Valide"])
+        self.well_results_table.setHorizontalHeaderLabels(["Activité (U/mL)", "Zone", "CV déploiement", "CV référence", "Différence (point de %)", "Validité"])
         self.well_results_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         well_results_layout.addWidget(self.well_results_table)
-        self.well_results_tab_index = self.info_stats_tabs.add_tab(well_results_tab, "Comparaison WellResults")
+        self.well_results_tab_index = self.info_stats_tabs.add_tab(well_results_tab, "Comparaison des gammes de calibration")
 
         # Onglet Comparaison LOD/LOQ
         lod_loq_tab = QWidget()
@@ -1157,7 +1184,7 @@ class Step3Acquisition(StepFrame):
         self.lod_loq_info_label.setWordWrap(True)
         lod_loq_layout.addWidget(self.lod_loq_info_label)
         self.lod_loq_table = QTableWidget(0, 9)
-        self.lod_loq_table.setHorizontalHeaderLabels(["Area", "LOD_Ref", "LOD_Acq", "LOQ_Ref", "LOQ_Acq", "Diff LOD", "Diff LOQ", "Valide LOD", "Valide LOQ"])
+        self.lod_loq_table.setHorizontalHeaderLabels(["Zone", "LOD Ref (ZU)", "LOD déploiement (ZU)", "LOQ Ref (ZU)", "LOQ déploiement (ZU)", "Diff LOD (point de %)", "Diff LOQ (point de %)", "Valide LOD", "Valide LOQ"])
         self.lod_loq_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         lod_loq_layout.addWidget(self.lod_loq_table)
         self.lod_loq_tab_index = self.info_stats_tabs.add_tab(lod_loq_tab, "Comparaison LOD/LOQ")
@@ -1328,6 +1355,9 @@ class Step3Acquisition(StepFrame):
         if checked:
             self.plate_type_var = box.get_id()
             logger.info(f"Type de plaque sélectionné: {self.plate_type_var}")
+            # Revalider les dossiers si un chemin a été sélectionné
+            if self.results_folder_var or self.reference_folder_var:
+                self._validate_folders()
 
     def _on_acquisition_mode_changed(self, checked, box):
         """
@@ -1336,6 +1366,9 @@ class Step3Acquisition(StepFrame):
         if checked:
             self.acquisition_mode_var = box.get_id()
             logger.info(f"Mode d'acquisition sélectionné: {self.acquisition_mode_var}")
+            # Revalider les dossiers si un chemin a été sélectionné
+            if self.results_folder_var or self.reference_folder_var:
+                self._validate_folders()
 
     def _on_results_folder_selected(self, path):
         self.results_folder_var = path
@@ -1354,16 +1387,17 @@ class Step3Acquisition(StepFrame):
         ref_errors = []
 
         is_expert = self.acquisition_mode_var == 'expert'
+        plate_type = self.plate_type_var
 
         # Validation du dossier de résultats
         if self.results_folder_var:
-            results_validation = FileValidator.validate_acquisition_folder(self.results_folder_var, is_expert)
+            results_validation = FileValidator.validate_acquisition_folder(self.results_folder_var, is_expert, plate_type)
             if not results_validation["is_valid"]:
                 results_errors.extend(results_validation["errors"])
 
         # Validation du dossier de référence
         if self.reference_folder_var:
-            ref_validation = FileValidator.validate_acquisition_folder(self.reference_folder_var, is_expert)
+            ref_validation = FileValidator.validate_acquisition_folder(self.reference_folder_var, is_expert, plate_type)
             if not ref_validation["is_valid"]:
                 ref_errors.extend(ref_validation["errors"])
 
@@ -3207,5 +3241,3 @@ class Step3Acquisition(StepFrame):
             if name in data.index:
                 return name
         return None
-
-
