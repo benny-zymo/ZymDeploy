@@ -10,8 +10,8 @@ import os
 import logging
 import subprocess
 #import pkg_resources
+import importlib.metadata as pkg_resources
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from pip._internal.metadata import pkg_resources
 
 # Configuration du logging
 logging.basicConfig(
@@ -83,7 +83,7 @@ def check_numpy_version():
 
 
 # Vérifier la version de NumPy avant d'importer les modules qui en dépendent
-#check_numpy_version()
+check_numpy_version()
 
 from zymosoft_assistant.gui.main_window import MainWindow
 from zymosoft_assistant.utils.helpers import resource_path
@@ -95,9 +95,13 @@ def main():
         logger.info("Démarrage du ZymDeploy")
 
         # Configuration de l'icône de l'application
-        icon_path = resource_path("assets\\icons\\icon.png")
-        APP_CONFIG['icon_path'] = icon_path
-        logger.info(f"Chemin de l'icône de l'application: {icon_path}")
+        try:
+            icon_path = resource_path("assets\\icons\\icon.png")
+            APP_CONFIG['icon_path'] = icon_path
+            logger.info(f"Chemin de l'icône de l'application: {icon_path}")
+        except Exception as e:
+            logger.warning(f"Impossible de charger l'icône de l'application: {e}")
+            APP_CONFIG['icon_path'] = None
 
         # Création de l'application Qt
         app = QApplication(sys.argv)
