@@ -93,7 +93,7 @@ class TestFileValidatorAcquisitionFolder(unittest.TestCase):
         mock_isdir.return_value = True
         mock_listdir.return_value = ["test.zym"]
 
-        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=False)
+        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=False, plate_type="nanofilm")
         self.assertTrue(result["is_valid"])
         self.assertEqual(result["errors"], [])
 
@@ -106,13 +106,13 @@ class TestFileValidatorAcquisitionFolder(unittest.TestCase):
         mock_isdir.side_effect = isdir_side_effect
         mock_listdir.return_value = ["test.zym"]
 
-        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=True)
+        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=True, plate_type="micro_depot")
         self.assertTrue(result["is_valid"])
         self.assertEqual(result["errors"], [])
 
     def test_validate_acquisition_folder_nonexistent(self):
         with patch("os.path.isdir", return_value=False):
-            result = FileValidator.validate_acquisition_folder("/invalid/path", is_expert_mode=False)
+            result = FileValidator.validate_acquisition_folder("/invalid/path", is_expert_mode=False, plate_type="nanofilm")
             self.assertFalse(result["is_valid"])
             self.assertIn("Le dossier sélectionné est invalide ou n'existe pas.", result["errors"])
 
@@ -128,14 +128,14 @@ class TestFileValidatorAcquisitionFolder(unittest.TestCase):
         mock_isdir.side_effect = isdir_side_effect
         mock_listdir.return_value = ["test.zym"]
         with patch("builtins.open", unittest.mock.mock_open(read_data='profil="Layer"')):
-            result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=True)
+            result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=True, plate_type="nanofilm")
             self.assertFalse(result["is_valid"])
             self.assertIn("Mode expert: Le dossier doit contenir un sous-dossier 'Image'.", result["errors"])
 
     @patch("zymosoft_assistant.core.file_validator.os.path.isdir", return_value=True)
     @patch("zymosoft_assistant.core.file_validator.os.listdir", return_value=["data.csv"])
     def test_validate_acquisition_folder_missing_zym_file(self, mock_listdir, mock_isdir):
-        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=False)
+        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=False, plate_type="nanofilm")
         self.assertFalse(result["is_valid"])
         self.assertIn("Aucun fichier .zym trouvé dans le dossier.", result["errors"])
 
@@ -143,7 +143,7 @@ class TestFileValidatorAcquisitionFolder(unittest.TestCase):
     @patch("zymosoft_assistant.core.file_validator.os.listdir", return_value=["test.zym"])
     @patch("builtins.open", new_callable=unittest.mock.mock_open, read_data='profil="Invalid"')
     def test_validate_acquisition_folder_invalid_profile(self, mock_open, mock_listdir, mock_isdir):
-        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=False)
+        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=False, plate_type="nanofilm")
         self.assertFalse(result["is_valid"])
         self.assertIn('Le fichier .zym ne contient pas de profil valide (profil="Layer" ou profil="Dot").', result["errors"])
 
@@ -152,6 +152,6 @@ class TestFileValidatorAcquisitionFolder(unittest.TestCase):
     @patch("builtins.open")
     def test_validate_acquisition_folder_read_error(self, mock_open, mock_listdir, mock_isdir):
         mock_open.side_effect = IOError("Test read error")
-        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=False)
+        result = FileValidator.validate_acquisition_folder("/valid/path", is_expert_mode=False, plate_type="nanofilm")
         self.assertFalse(result["is_valid"])
         self.assertIn("Erreur de lecture du fichier .zym: Test read error", result["errors"])
