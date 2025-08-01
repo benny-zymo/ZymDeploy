@@ -1856,20 +1856,11 @@ class Step3Acquisition(StepFrame):
         try:
             from zymosoft_assistant.scripts.processAcquisitionLog import getLogFile, analyzeLogFile
 
-            try:
-                log_file_path = getLogFile(results_folder)
-            except FileNotFoundError:
-                try:
-                    log_file_path = getLogFile(os.path.dirname(results_folder))
-                except FileNotFoundError:
-                    step2_data = self.main_window.session_data.get("step2_checks", {})
-                    zymosoft_path = step2_data.get("zymosoft_path")
-                    if zymosoft_path and os.path.isdir(os.path.join(zymosoft_path, '..', 'Diag', 'Temp')):
-                        default_log_path = os.path.join(zymosoft_path, '..', 'Diag', 'Temp')
-                    else:
-                        # Fallback to the old hardcoded path if the new one is not valid
-                        default_log_path = os.path.normpath("C:/Users/PCP-Zymoptiq/Desktop/routine deploiement/log/prior")
-                    log_file_path = getLogFile(default_log_path)
+            step2_data = self.main_window.session_data.get("step2_checks", {})
+            zymosoft_path = step2_data.get("zymosoft_path")
+            if zymosoft_path and os.path.isdir(os.path.join(zymosoft_path, '..', 'Diag', 'Temp')):
+                default_log_path = os.path.join(zymosoft_path, '..', 'Diag', 'Temp')
+                log_file_path = getLogFile(default_log_path)
 
             # Analyse du fichier de log
             log_analysis = analyzeLogFile(log_file_path)

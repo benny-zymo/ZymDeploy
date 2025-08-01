@@ -382,6 +382,14 @@ pip install -r requirements.txt
 
 ### Résolution des problèmes courants
 
+#### Erreur de compilation lors de l'installation de NumPy
+Si vous rencontrez une erreur lors de l'installation de NumPy indiquant qu'aucun compilateur n'est trouvé (par exemple: "Unknown compiler(s): [['icl'], ['cl'], ['cc'], ['gcc'], ['clang'], ['clang-cl'], ['pgcc']]"), c'est que pip essaie de compiler NumPy à partir des sources.
+
+Solution:
+1. Utilisez une version spécifique de NumPy avec des wheels pré-compilés: `pip install numpy==1.26.3`
+2. Forcez l'utilisation de packages binaires: `pip install -r requirements.txt --only-binary=numpy,scipy,scikit-learn`
+3. Exécutez le script `check_numpy_version.py` pour vérifier l'installation: `python check_numpy_version.py`
+
 #### Erreur de compatibilité NumPy
 Si vous rencontrez l'erreur suivante:
 ```
