@@ -432,9 +432,22 @@ def resource_path(relative_path: str) -> str:
         Chemin absolu vers la ressource
     """
     try:
-        # PyInstaller crée un dossier temporaire et stocke le chemin dans _MEIPASS
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        return os.path.join(base_path, relative_path)
+        # Si exécuté comme un fichier compilé par PyInstaller
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+            # Pour les icônes, on doit s'assurer que le chemin est correct
+            if "assets\\icons" in relative_path:
+                logger.info(f"Résolution du chemin d'icône en mode exécutable: {relative_path}")
+                # Vérifier si le chemin contient déjà zymosoft_assistant
+                if "zymosoft_assistant" in relative_path:
+                    return os.path.join(base_path, relative_path)
+                else:
+                    return os.path.join(base_path, "zymosoft_assistant", relative_path)
+            return os.path.join(base_path, relative_path)
+        else:
+            # Si exécuté normalement
+            base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            return os.path.join(base_path, relative_path)
     except Exception as e:
         logger.error(f"Erreur lors de la récupération du chemin de ressource: {str(e)}")
         return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), relative_path)
