@@ -13,21 +13,6 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo Setting up environment...
-
-REM Create a virtual environment if it doesn't exist
-if not exist "venv" (
-    echo Creating virtual environment...
-    python -m venv venv
-    if %errorlevel% neq 0 (
-        echo Error: Failed to create virtual environment.
-        pause
-        exit /b 1
-    )
-)
-
-REM Activate the virtual environment
-call venv\Scripts\activate
 if %errorlevel% neq 0 (
     echo Error: Failed to activate virtual environment.
     pause
@@ -37,9 +22,18 @@ if %errorlevel% neq 0 (
 echo Installing dependencies...
 REM Install required packages
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+REM Use --only-binary option to force pip to use pre-built wheels for packages that might require compilation
+pip install -r requirements.txt --only-binary=numpy,scipy,scikit-learn
 if %errorlevel% neq 0 (
     echo Error: Failed to install dependencies.
+    pause
+    exit /b 1
+)
+
+echo Verifying NumPy installation...
+python check_numpy_version.py
+if %errorlevel% neq 0 (
+    echo Error: NumPy verification failed.
     pause
     exit /b 1
 )

@@ -9,7 +9,7 @@ scipy
 pillow~=10.4.0
 jinja2~=3.1.4
 pefile
-jinja2>=3..6
+jinja2
 pyqt5>=5.15.11
 reportlab>=4.4.2
 pefile>=2023.2.7
