@@ -664,24 +664,24 @@ class ReportGenerator:
             elements.append(table)
             elements.append(Spacer(1, 0.15 * inch))
 
-            # 2. Statistiques d'acquisition
-            statistics = analysis.get("analysis", {}).get("statistics", {})
-            if statistics:
-                elements.append(Paragraph("2. Statistiques d'acquisition", styles['heading1']))
+            # 2. Vérifications manuelles
+            manual_validation = analysis.get("manual_validation", {})
+            if manual_validation:
+                elements.append(Paragraph("2. Vérifications manuelles", styles['heading1']))
+                manual_data = [["Critère", "Statut"]]
+                manual_checks = {
+                    'time': "Temps d'acquisition",
+                    'drift': "Drift",
+                    'blur': "Flou"
+                }
+                for key, name in manual_checks.items():
+                    status = "✓" if manual_validation.get(key, False) else "✗"
+                    manual_data.append([name, status])
 
-                stats_data = [
-                    ["Paramètre", "Valeur"],
-                    ["Pente", str(round(statistics.get("slope", 0), 4))],
-                    ["Ordonnée à l'origine", str(round(statistics.get("intercept", 0), 4))],
-                    ["Coefficient de détermination (R²)", str(round(statistics.get("r2", 0), 4))],
-                    #["Nombre de valeurs aberrantes", str(statistics.get("outliers_count", 0))],
-                    #["Pourcentage de valeurs aberrantes", f"{round(statistics.get('outliers_percentage', 0), 2)}%"]
-                ]
-
-                # Utiliser les largeurs de colonnes standard
-                stats_table = self._create_wrapped_table(stats_data, col_widths)
-                elements.append(stats_table)
+                manual_table = self._create_wrapped_table(manual_data, col_widths)
+                elements.append(manual_table)
                 elements.append(Spacer(1, 0.15 * inch))
+
 
             # 3. Comparaison à la référence (avec contexte nanofilm/micro-dépôt)
             validation = analysis.get("analysis", {}).get("validation", {})
