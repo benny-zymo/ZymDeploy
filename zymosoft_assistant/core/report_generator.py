@@ -609,6 +609,11 @@ class ReportGenerator:
             # Déterminer le type de plaque pour les titres contextuels
             is_nanofilm, type_description = self._determine_plate_type_context(analysis)
 
+
+            # print for debugging and all data in the dic
+            logger.debug(f"Type de plaque déterminé: {type_description} (is_nanofilm={is_nanofilm})")
+            print(f'analysis: {analysis}')
+
             # Création du document PDF avec des marges réduites
             doc = SimpleDocTemplate(
                 pdf_path,
