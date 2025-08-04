@@ -2943,10 +2943,9 @@ class Step3Acquisition(StepFrame):
                 dialog.setWindowTitle("Valider et étape suivante")
 
             dialog.setMinimumWidth(500)
-
             layout = QVBoxLayout(dialog)
 
-            # Message explicatif
+            # Explanatory message
             message = ""
             if action_type == "validate_continue":
                 message = "Vous allez valider cette acquisition et recommencer une nouvelle acquisition."
@@ -2959,61 +2958,63 @@ class Step3Acquisition(StepFrame):
             message_label.setWordWrap(True)
             layout.addWidget(message_label)
 
-            # Add checkboxes for validation
-            checkbox_time = None
-            checkbox_drift = None
-            if validated:
-                validation_group = QGroupBox("Critères de validation obligatoires")
-                validation_layout = QVBoxLayout(validation_group)
+            # Checkboxes for manual validation
+            title = "Critères de validation (obligatoire si validation)" if validated else "Critères de validation (optionnel)"
+            validation_group = QGroupBox(title)
+            validation_layout = QVBoxLayout(validation_group)
 
-                checkbox_time = QCheckBox("Valider le temps d'acquisition")
-                checkbox_drift = QCheckBox("Valider le drift et le flou")
+            checkbox_time = QCheckBox("Valider le temps d'acquisition")
+            checkbox_drift = QCheckBox("Valider le drift")
+            checkbox_blur = QCheckBox("Valider le flou")
 
-                validation_layout.addWidget(checkbox_time)
-                validation_layout.addWidget(checkbox_drift)
+            validation_layout.addWidget(checkbox_time)
+            validation_layout.addWidget(checkbox_drift)
+            validation_layout.addWidget(checkbox_blur)
 
-                layout.addWidget(validation_group)
+            layout.addWidget(validation_group)
 
-            # Champ de commentaires
+            # Comments field
             comments_label = QLabel("Commentaires:")
             layout.addWidget(comments_label)
-
             comments_text = QTextEdit()
-            comments_text.setPlainText(self.comments_var)  # Pré-remplir avec les commentaires existants
+            comments_text.setPlainText(self.comments_var)
             layout.addWidget(comments_text)
 
-            # Boutons
+            # Buttons
             buttons_layout = QHBoxLayout()
             cancel_button = QPushButton("Annuler")
             cancel_button.clicked.connect(dialog.reject)
             buttons_layout.addWidget(cancel_button)
-
             confirm_button = QPushButton("Confirmer")
-            # We will connect this later
             confirm_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
             buttons_layout.addWidget(confirm_button)
-
             layout.addLayout(buttons_layout)
+
+            # Store checkbox state to be passed to _finalize_acquisition
+            self.manual_validation_states = {}
 
             def on_confirm():
                 """Custom slot to handle confirmation and validation."""
                 if validated:
-                    if not checkbox_time.isChecked() or not checkbox_drift.isChecked():
+                    if not checkbox_time.isChecked() or not checkbox_drift.isChecked() or not checkbox_blur.isChecked():
                         QMessageBox.warning(dialog, "Validation incomplète",
-                                            "Veuillez cocher les deux cases de validation pour pouvoir valider l'acquisition.")
+                                            "Veuillez cocher les trois cases de validation pour pouvoir valider l'acquisition.")
                         return  # Keep the dialog open
 
-                # If all checks pass, save comments and accept the dialog
+                # Save checkbox states
+                self.manual_validation_states = {
+                    'time': checkbox_time.isChecked(),
+                    'drift': checkbox_drift.isChecked(),
+                    'blur': checkbox_blur.isChecked()
+                }
+
                 self.comments_var = comments_text.toPlainText().strip()
                 dialog.accept()
 
             confirm_button.clicked.connect(on_confirm)
-
-            # Afficher la boîte de dialogue
             result = dialog.exec_()
 
             if result == QDialog.Accepted:
-                # The comments are already saved in on_confirm
                 self._finalize_acquisition(validated, continue_acquisitions)
                 return True
 
@@ -3044,7 +3045,8 @@ class Step3Acquisition(StepFrame):
                 "analysis": self.analysis_results,
                 "comments": comments,
                 "validated": validated,
-                "timestamp": timestamp_str
+                "timestamp": timestamp_str,
+                "manual_validation": getattr(self, 'manual_validation_states', {})
             }
             self.acquisitions.append(acquisition)
             self._update_history()
