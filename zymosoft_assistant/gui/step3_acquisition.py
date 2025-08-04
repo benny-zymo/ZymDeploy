@@ -3198,31 +3198,19 @@ class Step3Acquisition(StepFrame):
         except Exception as e:
             logger.error(f"Erreur dans _update_history: {str(e)}", exc_info=True)
 
-    def _generate_acquisition_report(self, validated_status):
+    def _generate_acquisition_report(self, acquisition_data):
         """
         Génère un rapport PDF pour l'acquisition actuelle, en utilisant le statut de validation fourni.
         """
         try:
-            if not self.analysis_results:
-                QMessageBox.critical(self.widget, "Erreur", "Aucun résultat d'analyse disponible.")
+            if not acquisition_data:
+                QMessageBox.critical(self.widget, "Erreur", "Aucune donnée d'acquisition disponible pour le rapport.")
                 return
 
             report_generator = ReportGenerator()
 
-            # Construire le dictionnaire de données pour le rapport
-            report_data = {
-                'installation_id': self.main_window.session_data.get('installation_id', 'Inconnu'),
-                'acquisition_id': self.current_acquisition_id,
-                'plate_type': self.plate_type_var,
-                'acquisition_mode': self.acquisition_mode_var,
-                'folder' : self.results_folder_var,
-                'reference_folder': self.reference_folder_var,
-                'analysis': self.analysis_results,
-                'comments': self.comments_var,
-                'validated': validated_status
-            }
-
-            report_path = report_generator.generate_acquisition_report(report_data)
+            # Le dictionnaire de données est maintenant l'objet acquisition lui-même
+            report_path = report_generator.generate_acquisition_report(acquisition_data)
             QMessageBox.information(self.widget, "Rapport",
                                     f"Le rapport d'acquisition a été généré avec succès:\n{report_path}")
 
