@@ -11,7 +11,6 @@ import logging
 import threading
 import time
 import sys
-import configparser
 
 import pandas
 from PIL import Image, ImageQt
@@ -827,83 +826,9 @@ class Step3Acquisition(StepFrame):
         self.lod_loq_tab_index = -1
         self.log_analysis_tab_index = -1
 
-        # Expert mode widgets
-        self.expert_mode_status_label = None
-
         # Image navigation
         self.current_image_index = 0
         self.graph_titles = []
-
-    def _get_config_path(self):
-        """Constructs the path to the Config.ini file."""
-        try:
-            step2_data = self.main_window.session_data.get("step2_checks", {})
-            zymosoft_path = step2_data.get("zymosoft_path")
-            if not zymosoft_path:
-                logger.warning("Zymosoft path not found in session data.")
-                return None
-            return os.path.join(zymosoft_path, "etc", "Config.ini")
-        except Exception as e:
-            logger.error(f"Error getting config path: {e}")
-            return None
-
-    def _read_expert_mode(self):
-        """Reads the ExpertMode value from Config.ini."""
-        config_path = self._get_config_path()
-        if not config_path or not os.path.exists(config_path):
-            logger.warning(f"Config.ini not found at {config_path}")
-            return False
-
-        config = configparser.ConfigParser()
-        config.read(config_path)
-
-        try:
-            return config.getboolean('Application', 'ExpertMode')
-        except (configparser.NoSectionError, configparser.NoOptionError):
-            logger.warning("ExpertMode setting not found in Config.ini, defaulting to False.")
-            return False
-
-    def _write_expert_mode(self, value: bool):
-        """Writes the ExpertMode value to Config.ini."""
-        config_path = self._get_config_path()
-        if not config_path:
-            QMessageBox.critical(self.widget, "Erreur", "Le chemin de configuration de Zymosoft n'a pas pu être déterminé.")
-            return
-
-        config = configparser.ConfigParser()
-        config.read(config_path)
-
-        if not config.has_section('Application'):
-            config.add_section('Application')
-
-        config.set('Application', 'ExpertMode', str(value).lower())
-
-        try:
-            with open(config_path, 'w') as configfile:
-                config.write(configfile)
-            logger.info(f"ExpertMode set to {value} in {config_path}")
-        except Exception as e:
-            logger.error(f"Failed to write to Config.ini: {e}")
-            QMessageBox.critical(self.widget, "Erreur", f"Impossible d'écrire dans le fichier Config.ini:\n{e}")
-
-    def _update_expert_mode_label(self):
-        """Updates the status label for the expert mode."""
-        if not self.expert_mode_status_label:
-            return
-
-        is_expert = self._read_expert_mode()
-        if is_expert:
-            self.expert_mode_status_label.setText("Activé")
-            self.expert_mode_status_label.setStyleSheet(f"color: {COLOR_SCHEME.get('success', 'green')}; font-weight: bold;")
-        else:
-            self.expert_mode_status_label.setText("Désactivé")
-            self.expert_mode_status_label.setStyleSheet(f"color: {COLOR_SCHEME.get('error', 'red')}; font-weight: bold;")
-
-    def _toggle_expert_mode(self):
-        """Toggles the expert mode setting."""
-        current_status = self._read_expert_mode()
-        self._write_expert_mode(not current_status)
-        self._update_expert_mode_label()
 
     def create_widgets(self):
         """
@@ -1091,24 +1016,6 @@ class Step3Acquisition(StepFrame):
         instructions_label.setWordWrap(True)
         instructions_layout.addWidget(instructions_label)
         self.config_layout.addWidget(instructions_frame)
-
-        # --- Groupe 3: Configuration Avancée (Expert Mode) ---
-        expert_mode_groupbox = QGroupBox("Configuration Avancée")
-        expert_mode_layout = QGridLayout(expert_mode_groupbox)
-
-        expert_mode_layout.addWidget(QLabel("Mode Expert (config.ini):"), 0, 0)
-
-        self.expert_mode_status_label = QLabel("Chargement...")
-        expert_mode_layout.addWidget(self.expert_mode_status_label, 0, 1)
-
-        toggle_button = QPushButton("Activer/Désactiver")
-        toggle_button.clicked.connect(self._toggle_expert_mode)
-        expert_mode_layout.addWidget(toggle_button, 0, 2)
-
-        expert_mode_layout.setColumnStretch(3, 1)  # Add stretch to the right
-
-        self.config_layout.addWidget(expert_mode_groupbox)
-        self._update_expert_mode_label()  # Set initial state
 
     def _create_selection_widgets(self):
         """
@@ -2943,9 +2850,10 @@ class Step3Acquisition(StepFrame):
                 dialog.setWindowTitle("Valider et étape suivante")
 
             dialog.setMinimumWidth(500)
+
             layout = QVBoxLayout(dialog)
 
-            # Explanatory message
+            # Message explicatif
             message = ""
             if action_type == "validate_continue":
                 message = "Vous allez valider cette acquisition et recommencer une nouvelle acquisition."
@@ -2958,63 +2866,34 @@ class Step3Acquisition(StepFrame):
             message_label.setWordWrap(True)
             layout.addWidget(message_label)
 
-            # Checkboxes for manual validation
-            title = "Critères de validation (obligatoire si validation)" if validated else "Critères de validation (optionnel)"
-            validation_group = QGroupBox(title)
-            validation_layout = QVBoxLayout(validation_group)
-
-            checkbox_time = QCheckBox("Valider le temps d'acquisition")
-            checkbox_drift = QCheckBox("Valider le drift")
-            checkbox_blur = QCheckBox("Valider le flou")
-
-            validation_layout.addWidget(checkbox_time)
-            validation_layout.addWidget(checkbox_drift)
-            validation_layout.addWidget(checkbox_blur)
-
-            layout.addWidget(validation_group)
-
-            # Comments field
+            # Champ de commentaires
             comments_label = QLabel("Commentaires:")
             layout.addWidget(comments_label)
+
             comments_text = QTextEdit()
-            comments_text.setPlainText(self.comments_var)
+            comments_text.setPlainText(self.comments_var)  # Pré-remplir avec les commentaires existants
             layout.addWidget(comments_text)
 
-            # Buttons
+            # Boutons
             buttons_layout = QHBoxLayout()
             cancel_button = QPushButton("Annuler")
             cancel_button.clicked.connect(dialog.reject)
             buttons_layout.addWidget(cancel_button)
+
             confirm_button = QPushButton("Confirmer")
+            confirm_button.clicked.connect(dialog.accept)
             confirm_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
             buttons_layout.addWidget(confirm_button)
+
             layout.addLayout(buttons_layout)
 
-            # Store checkbox state to be passed to _finalize_acquisition
-            self.manual_validation_states = {}
-
-            def on_confirm():
-                """Custom slot to handle confirmation and validation."""
-                if validated:
-                    if not checkbox_time.isChecked() or not checkbox_drift.isChecked() or not checkbox_blur.isChecked():
-                        QMessageBox.warning(dialog, "Validation incomplète",
-                                            "Veuillez cocher les trois cases de validation pour pouvoir valider l'acquisition.")
-                        return  # Keep the dialog open
-
-                # Save checkbox states
-                self.manual_validation_states = {
-                    'time': checkbox_time.isChecked(),
-                    'drift': checkbox_drift.isChecked(),
-                    'blur': checkbox_blur.isChecked()
-                }
-
-                self.comments_var = comments_text.toPlainText().strip()
-                dialog.accept()
-
-            confirm_button.clicked.connect(on_confirm)
+            # Afficher la boîte de dialogue
             result = dialog.exec_()
 
             if result == QDialog.Accepted:
+                # Récupérer les commentaires
+                self.comments_var = comments_text.toPlainText().strip()
+                # Finaliser l'acquisition
                 self._finalize_acquisition(validated, continue_acquisitions)
                 return True
 
@@ -3036,7 +2915,6 @@ class Step3Acquisition(StepFrame):
             comments = self.comments_var if hasattr(self, 'comments_var') else ""
 
             self.current_acquisition_id += 1
-            timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
             acquisition = {
                 "id": self.current_acquisition_id,
                 "plate_type": self.plate_type_var,
@@ -3045,15 +2923,11 @@ class Step3Acquisition(StepFrame):
                 "analysis": self.analysis_results,
                 "comments": comments,
                 "validated": validated,
-                "timestamp": timestamp_str,
-                "manual_validation": getattr(self, 'manual_validation_states', {})
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
             }
             self.acquisitions.append(acquisition)
             self._update_history()
             self.save_data()
-
-            # Copy log file
-            self._copy_log_file(self.current_acquisition_id, timestamp_str)
 
             # Generate the report automatically upon finalizing, with the correct status
             self._generate_acquisition_report(validated)
@@ -3072,44 +2946,6 @@ class Step3Acquisition(StepFrame):
         except Exception as e:
             logger.error(f"Erreur dans _finalize_acquisition: {str(e)}", exc_info=True)
             QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue lors de la finalisation :\n{str(e)}")
-
-    def _copy_log_file(self, acquisition_id, timestamp):
-        """Copies the log file to the results directory."""
-        try:
-            import shutil
-            from zymosoft_assistant.scripts.processAcquisitionLog import getLogFile
-
-            step2_data = self.main_window.session_data.get("step2_checks", {})
-            zymosoft_path = step2_data.get("zymosoft_path")
-
-            if not zymosoft_path:
-                logger.error("Could not copy log file: zymosoft_path not found.")
-                return
-
-            log_dir = os.path.join(zymosoft_path, '..', 'Diag', 'Temp')
-            if not os.path.isdir(log_dir):
-                logger.error(f"Log directory not found: {log_dir}")
-                return
-
-            source_log_path = getLogFile(log_dir)
-            destination_dir = self.results_folder_var
-
-            if not os.path.isdir(destination_dir):
-                logger.error(f"Destination directory for log copy does not exist: {destination_dir}")
-                return
-
-            # Create a unique filename for the log
-            safe_timestamp = timestamp.replace(":", "-").replace(" ", "_")
-            log_filename = f"log_acquisition_{acquisition_id}_{safe_timestamp}.log"
-            destination_log_path = os.path.join(destination_dir, log_filename)
-
-            shutil.copy2(source_log_path, destination_log_path)
-            logger.info(f"Log file copied from {source_log_path} to {destination_log_path}")
-
-        except FileNotFoundError:
-            logger.warning(f"Log file not found in {log_dir}. Skipping copy.")
-        except Exception as e:
-            logger.error(f"Failed to copy log file: {e}", exc_info=True)
 
     def _reset_acquisition(self):
         """
@@ -3198,19 +3034,32 @@ class Step3Acquisition(StepFrame):
         except Exception as e:
             logger.error(f"Erreur dans _update_history: {str(e)}", exc_info=True)
 
-    def _generate_acquisition_report(self, acquisition_data):
+    def _generate_acquisition_report(self, validated_status):
         """
         Génère un rapport PDF pour l'acquisition actuelle, en utilisant le statut de validation fourni.
         """
         try:
-            if not acquisition_data:
-                QMessageBox.critical(self.widget, "Erreur", "Aucune donnée d'acquisition disponible pour le rapport.")
+            if not self.analysis_results:
+                QMessageBox.critical(self.widget, "Erreur", "Aucun résultat d'analyse disponible.")
                 return
 
             report_generator = ReportGenerator()
 
-            # Le dictionnaire de données est maintenant l'objet acquisition lui-même
-            report_path = report_generator.generate_acquisition_report(acquisition_data)
+            # Construire le dictionnaire de données pour le rapport
+            report_data = {
+                'installation_id': self.main_window.session_data.get('installation_id', 'Inconnu'),
+                'acquisition_id': self.current_acquisition_id,
+                'plate_type': self.plate_type_var,
+                'acquisition_mode': self.acquisition_mode_var,
+                'folder' : self.results_folder_var,
+                'reference_folder': self.reference_folder_var,
+                'analysis': self.analysis_results,
+                'comments': self.comments_var,
+                'validated': validated_status,
+                'manual_validation': getattr(self, 'manual_validation_states', {})
+            }
+
+            report_path = report_generator.generate_acquisition_report(report_data)
             QMessageBox.information(self.widget, "Rapport",
                                     f"Le rapport d'acquisition a été généré avec succès:\n{report_path}")
 
