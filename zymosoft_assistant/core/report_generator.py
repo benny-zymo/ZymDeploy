@@ -26,6 +26,63 @@ logger = logging.getLogger(__name__)
 showSubItemValid = False
 showSubItemErrors = True
 
+tableStyle = TableStyle([
+    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#009967")),
+    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ('WORDWRAP', (0, 0), (-1, -1), True),
+    # Ajouter plus de padding pour éviter les débordements
+    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ('TOPPADDING', (0, 0), (-1, -1), 3),
+    ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+])
+
+pageHeaderTableStyle = TableStyle([
+    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#009967")),
+    ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+    ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+    ('TOPPADDING', (0, 0), (-1, -1), 15),
+    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+    ('FONTSIZE', (0, 0), (-1, -1), 18),
+])
+
+def add_client_infos(step1_checks: Dict[str, Any], elements: List[Any], styles: Dict[str, ParagraphStyle],
+                     total_width: float):
+    """
+    Ajoute les informations du client dans le rapport
+
+    Args:
+        step1_checks: Dictionnaire contenant les résultats de l'étape 1
+        elements: Liste des éléments du rapport
+        styles: Styles de paragraphe à utiliser
+        total_width: Largeur totale disponible pour le tableau
+    """
+
+    # add title 1 Client et Operateur
+    elements.append(Paragraph("1. Informations Client et Opérateur", styles['heading1']))
+
+    client_name = step1_checks.get("name", "Inconnu")
+    cs_responsible = step1_checks.get("cs_responsible", "Inconnu")
+    instrumentation_responsible = step1_checks.get("instrumentation_responsible", "Inconnu")
+
+    client_info_data = [
+        ["Roles", "Personnes"],
+        ["Client", client_name],
+        ["Responsable CS", cs_responsible],
+        ["Responsable Instrumentation", instrumentation_responsible]
+    ]
+    client_info_table = Table(client_info_data, colWidths=[total_width * 0.3, total_width * 0.7])
+    client_info_table.setStyle(tableStyle)
+    elements.append(client_info_table)
+    elements.append(Spacer(1, 0.5 * cm))
+
 
 class ReportGenerator:
     """
@@ -161,31 +218,12 @@ class ReportGenerator:
             # En-tête avec logo
             header_data = [[Image(logo_path, width=2 * inch, height=1 * inch), title]]
             header_table = Table(header_data, colWidths=[2.5 * inch, total_width - 2.5 * inch])
-            header_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#009967")),
-                ('TEXTCOLOR', (1, 0), (1, 0), colors.white),
-                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-                ('ALIGN', (1, 0), (1, 0), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
-                ('TOPPADDING', (0, 0), (-1, -1), 15),
-                ('FONTNAME', (1, 0), (1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (1, 0), (1, 0), 18),
-            ]))
+            header_table.setStyle(pageHeaderTableStyle)
         else:
             # En-tête sans logo (fallback)
             header_data = [[title]]
             header_table = Table(header_data, colWidths=[total_width])
-            header_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#009967")),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
-                ('TOPPADDING', (0, 0), (-1, -1), 15),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 18),
-            ]))
+            header_table.setStyle(pageHeaderTableStyle)
 
         elements.append(header_table)
         elements.append(Spacer(1, 0.25 * inch))
@@ -233,22 +271,7 @@ class ReportGenerator:
         table = Table(processed_data, colWidths=col_widths)
 
         # Appliquer un style avec padding supplémentaire et wrapping amélioré
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), header_color),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('WORDWRAP', (0, 0), (-1, -1), True),
-            # Ajouter plus de padding pour éviter les débordements
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
-        ]))
+        table.setStyle(tableStyle)
 
         return table
 
@@ -270,12 +293,13 @@ class ReportGenerator:
         else:
             return False, "en volume"
 
-    def generate_step2_report(self, checks: Dict[str, Any]) -> str:
+    def generate_step2_report(self, checks: Dict[str, Any], step1_results: Dict[str, Any]) -> str:
         """
         Generates a step 2 verification report in PDF format based on various installation
         checks. The report includes summary, errors, warnings, installation structure,
         and configuration file validations.
 
+        :param step1_results:
         :param checks: A dictionary containing details about verification results. It should
                        include keys such as 'installation_id', 'installation_valid',
                        'structure', 'errors', 'warnings', and detailed results for specific
@@ -316,11 +340,17 @@ class ReportGenerator:
         self._create_report_header(elements, "Rapport de vérification de l'installation ZymDeploy", total_width)
 
         # Date
-        elements.append(Paragraph(f"Date : {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", styles['normal']))
+        installation_id = step1_results.get("installation_id", "Inconnu")
+        elements.append(
+            Paragraph(f"Date : {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}  ", styles['normal']))
+        elements.append(Paragraph(f"Installation ID : {installation_id}", styles['normal']))
         elements.append(Spacer(1, 0.3 * cm))
 
+        # Table for client information
+        add_client_infos(step1_results, elements, styles, total_width)
+
         # Section 1 : Résumé global
-        elements.append(Paragraph("1. Résumé global", styles['heading1']))
+        elements.append(Paragraph("2. Résumé global", styles['heading1']))
         elements.append(Paragraph(
             "Ce rapport présente les résultats détaillés des vérifications de l'installation ZymDeploy, "
             "incluant la structure des dossiers et la validité des fichiers de configuration principaux.",
@@ -343,7 +373,7 @@ class ReportGenerator:
         elements.append(Spacer(1, 0.2 * cm))
 
         # Section 2 : Erreurs et avertissements
-        elements.append(Paragraph("2. Erreurs et avertissements", styles['heading1']))
+        elements.append(Paragraph("3. Erreurs et avertissements", styles['heading1']))
         errors = []
         warnings = []
 
@@ -369,7 +399,7 @@ class ReportGenerator:
             elements.append(Spacer(1, 0.1 * cm))
 
         # Section 3 : Structure de l'installation
-        elements.append(Paragraph("3. Structure de l'installation", styles['heading1']))
+        elements.append(Paragraph("4. Structure de l'installation", styles['heading1']))
         elements.append(Paragraph(
             "Cette section détaille la présence des dossiers et fichiers essentiels à l'installation.",
             styles['normal']))
@@ -389,11 +419,11 @@ class ReportGenerator:
             elements.append(Spacer(1, 0.2 * cm))
 
         # Section 4 : Vérification des fichiers de configuration
-        elements.append(Paragraph("4. Vérification des fichiers de configuration", styles['heading1']))
+        elements.append(Paragraph("5. Vérification des fichiers de configuration", styles['heading1']))
 
         # 4.1 Config.ini
         config_ini_results = checks.get("config_ini", {})
-        elements.append(Paragraph("4.1 Config.ini", styles['heading2']))
+        elements.append(Paragraph("5.1 Config.ini", styles['heading2']))
         elements.append(Paragraph(
             "Vérification des paramètres critiques du fichier <b>Config.ini</b>.", styles['normal']))
         status_text = "✓ Valide" if config_ini_results.get("config_valid", False) else "✗ Non valide"
@@ -441,7 +471,7 @@ class ReportGenerator:
 
         # 4.2 PlateConfig.ini
         plate_config_ini_results = checks.get("plate_config_ini", {})
-        elements.append(Paragraph("4.2 PlateConfig.ini", styles['heading2']))
+        elements.append(Paragraph("5.2 PlateConfig.ini", styles['heading2']))
         elements.append(Paragraph(
             "Vérification des types de plaques et des configurations associées dans <b>PlateConfig.ini</b>.",
             styles['normal']))
@@ -538,7 +568,7 @@ class ReportGenerator:
 
         # 4.3 ZymoCubeCtrl.ini
         zymocube_ctrl_ini_results = checks.get("zymocube_ctrl_ini", {})
-        elements.append(Paragraph("4.3 ZymoCubeCtrl.ini", styles['heading2']))
+        elements.append(Paragraph("5.3 ZymoCubeCtrl.ini", styles['heading2']))
         elements.append(Paragraph(
             "Vérification des paramètres principaux du fichier <b>ZymoCubeCtrl.ini</b>.", styles['normal']))
         status_text = "✓ Valide" if zymocube_ctrl_ini_results.get("config_valid", False) else "✗ Non valide"
@@ -584,7 +614,7 @@ class ReportGenerator:
         logger.info(f"Rapport de l'étape 2 généré: {pdf_path}")
         return pdf_path
 
-    def generate_acquisition_report(self, analysis: Dict[str, Any]) -> str:
+    def generate_acquisition_report(self, analysis: Dict[str, Any], step1_checks: Dict[str, Any]) -> str:
         """
         Génère un rapport PDF pour une acquisition (étape 3)
 
@@ -608,6 +638,10 @@ class ReportGenerator:
 
             # Déterminer le type de plaque pour les titres contextuels
             is_nanofilm, type_description = self._determine_plate_type_context(analysis)
+
+            # print for debugging and all data in the dic
+            logger.debug(f"Type de plaque déterminé: {type_description} (is_nanofilm={is_nanofilm})")
+            print(f'analysis: {analysis}')
 
             # Création du document PDF avec des marges réduites
             doc = SimpleDocTemplate(
@@ -634,18 +668,26 @@ class ReportGenerator:
             # Date
             elements.append(
                 Paragraph(f"Date: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", styles['normal']))
+            # Installation ID
+            installation_id = analysis.get("installation_id", "Inconnu")
+            elements.append(Paragraph(f"Installation ID: {installation_id}", styles['normal']))
             elements.append(Spacer(1, 0.25 * inch))
 
+            # Client informations
+            add_client_infos(step1_checks, elements, styles, total_width)
+
             # 1. Informations sur l'acquisition
-            elements.append(Paragraph("1. Informations sur l'acquisition", styles['heading1']))
+            elements.append(Paragraph("2. Informations sur l'acquisition", styles['heading1']))
 
             # Tableau des informations
             data = [
                 ["Paramètre", "Valeur"],
                 ["Type de plaque", analysis.get("plate_type", "inconnu")],
                 ["Mode d'acquisition", analysis.get("acquisition_mode", "inconnu")],
-                ["Dossier de résultats", analysis.get("folder", "")],
-                ["Dossier de référence", analysis.get("reference_folder", "")],
+                ["Dossier de résultats",
+                 analysis.get("folder", "").split("/")[-1] if analysis.get("folder") else "inconnu"],
+                ["Dossier de référence", analysis.get("reference_folder", "").split("/")[-1] if analysis.get(
+                    "reference_folder") else "inconnu"],
             ]
 
             # Statut corrigé - utiliser le statut validé par l'utilisateur
@@ -653,10 +695,7 @@ class ReportGenerator:
             status_text = "✓ Acquisition valide" if is_validated else "✗ Acquisition non valide"
             data.append(["Statut", status_text])
 
-            # Ajouter les commentaires s'ils existent
-            comments = analysis.get("comments", "")
-            if comments:
-                data.append(["Commentaires", comments])
+
 
             # Utiliser des largeurs de colonnes standard
             col_widths = [total_width * 0.3, total_width * 0.7]
@@ -664,34 +703,43 @@ class ReportGenerator:
             elements.append(table)
             elements.append(Spacer(1, 0.15 * inch))
 
-            # 2. Statistiques d'acquisition
-            statistics = analysis.get("analysis", {}).get("statistics", {})
-            if statistics:
-                elements.append(Paragraph("2. Statistiques d'acquisition", styles['heading1']))
+            col_widths = [total_width * 0.3, total_width * 0.5, total_width * 0.2]
 
-                stats_data = [
-                    ["Paramètre", "Valeur"],
-                    ["Pente", str(round(statistics.get("slope", 0), 4))],
-                    ["Ordonnée à l'origine", str(round(statistics.get("intercept", 0), 4))],
-                    ["Coefficient de détermination (R²)", str(round(statistics.get("r2", 0), 4))],
-                    #["Nombre de valeurs aberrantes", str(statistics.get("outliers_count", 0))],
-                    #["Pourcentage de valeurs aberrantes", f"{round(statistics.get('outliers_percentage', 0), 2)}%"]
-                ]
+            # 2. Vérifications manuelles
+            manual_validation = analysis.get("manual_validation", {})
+            if manual_validation:
+                elements.append(Paragraph("3. Vérifications manuelles", styles['heading1']))
+                manual_data = [["Paramètre", "Critère", "Statut"]]
+                manual_checks = {
+                    'time': "Temps d'acquisition",
+                    'drift': "Drift",
+                    'blur': "Flou"
+                }
 
-                # Utiliser les largeurs de colonnes standard
-                stats_table = self._create_wrapped_table(stats_data, col_widths)
-                elements.append(stats_table)
+                for key, name in manual_checks.items():
+                    status = "✓" if manual_validation.get(key, False) else "✗"
+                    manual_data.append([name, "Vérifier par l'opérateur", status])
+
+                manual_table = self._create_wrapped_table(manual_data, col_widths)
+                elements.append(manual_table)
+                elements.append(Spacer(1, 0.15 * inch))
+
+                # 2.1 commentaire de l'opérateur
+                comments = analysis.get("comments", "")
+
+                elements.append(Paragraph("Commentaires de l'opérateur", styles['heading3']))
+                elements.append(Paragraph(comments if comments else "-----------------", styles['normal']))
                 elements.append(Spacer(1, 0.15 * inch))
 
             # 3. Comparaison à la référence (avec contexte nanofilm/micro-dépôt)
             validation = analysis.get("analysis", {}).get("validation", {})
             if validation and "comparison" in validation:
                 # Titre contextualisé selon le type de plaque
-                comparison_title = f"3. Comparaison à la référence, {type_description}"
+                comparison_title = f"4. Comparaison à la référence, {type_description}"
                 elements.append(Paragraph(comparison_title, styles['heading1']))
 
                 # 3.1 Résumé de la comparaison
-                elements.append(Paragraph("3.1 Résumé de la comparaison", styles['heading2']))
+                elements.append(Paragraph("4.1 Résumé de la comparaison", styles['heading2']))
 
                 # Import des critères de validation
                 from zymosoft_assistant.utils.constants import VALIDATION_CRITERIA
@@ -757,18 +805,20 @@ class ReportGenerator:
                 elements.append(Spacer(1, 0.15 * inch))
 
                 # 3.2 Graphiques de comparaison aux références
-                elements.append(Paragraph("3.2 Graphiques de comparaison", styles['heading2']))
+                elements.append(Paragraph("4.2 Graphiques de comparaison", styles['heading2']))
                 self._add_reference_comparison_graphs(elements, analysis, total_width)
 
-            # 4. Comparaison des gammes de calibration
+            # 5. Comparaison des gammes de calibration
             if validation and "well_results_comparison" in validation:
-                elements.append(Paragraph("4. Comparaison des gammes de calibration", styles['heading1']))
+                elements.append(Paragraph("5. Comparaison des gammes de calibration", styles['heading1']))
 
                 try:
                     well_results_df = pd.DataFrame(validation["well_results_comparison"])
 
-                    # 4.1 Résumé
-                    elements.append(Paragraph("4.1 Résumé", styles['heading2']))
+                    # 5.1 Résumé
+                    elements.append(Paragraph("5.1 Résumé", styles['heading2']))
+                    elements.append(Paragraph("Une mesure est valide si elle se situe dans l'intervalle [valeur de référence - tolérance, valeur de référence + tolérance], où la tolérance est de 5 unités pour une valeur de référence ≤ 0, varie linéairement de 5 à 3 unités pour une valeur entre 0 et 5, de 3 à 2 unités pour une valeur entre 5 et 10, et reste fixe à 2 unités pour une valeur > 10.", styles['normal']))
+                    elements.append(Spacer(1, 0.15 * cm))
 
                     # Préparation des données pour le tableau avec nouveaux en-têtes
                     well_results_data = [
@@ -810,13 +860,13 @@ class ReportGenerator:
                     elements.append(well_results_table)
                     elements.append(Spacer(1, 0.15 * inch))
 
-                    # 4.2 Graphiques des gammes de calibration enzymatique
-                    elements.append(Paragraph("4.2 Graphiques des gammes de calibration", styles['heading2']))
+                    # 5.2 Graphiques des gammes de calibration enzymatique
+                    elements.append(Paragraph("5.2 Graphiques des gammes de calibration", styles['heading2']))
                     self._add_enzymatic_calibration_graphs(elements, analysis, total_width)
 
-                    # 4.3 Statistiques de comparaison des gammes de calibration
+                    # 5.3 Statistiques de comparaison des gammes de calibration
                     if not well_results_df.empty:
-                        elements.append(Paragraph("4.3 Statistiques de comparaison", styles['heading2']))
+                        elements.append(Paragraph("5.3 Statistiques de comparaison", styles['heading2']))
 
                         # Calculer les statistiques globales
                         diff_mean = well_results_df['CV'].mean() if 'CV' in well_results_df.columns else 0
@@ -835,6 +885,7 @@ class ReportGenerator:
                         ]
 
                         # Utiliser les largeurs de colonnes standard
+                        col_widths = [total_width * 0.7, total_width * 0.3]
                         well_stats_table = self._create_wrapped_table(well_stats_data, col_widths)
                         elements.append(well_stats_table)
                         elements.append(Spacer(1, 0.15 * inch))
@@ -846,9 +897,9 @@ class ReportGenerator:
                         Paragraph(f"Erreur lors de l'affichage des résultats de puits: {str(e)}", styles['normal']))
                     elements.append(Spacer(1, 0.15 * inch))
 
-            # 5. Comparaison des LOD/LOQ avec nouveaux en-têtes
+            # 6. Comparaison des LOD/LOQ avec nouveaux en-têtes
             if validation and "lod_loq_comparison" in validation:
-                elements.append(Paragraph("5. Comparaison des LOD/LOQ", styles['heading1']))
+                elements.append(Paragraph("6. Comparaison des LOD/LOQ", styles['heading1']))
 
                 try:
                     lod_loq_df = pd.DataFrame(validation["lod_loq_comparison"])
@@ -902,7 +953,7 @@ class ReportGenerator:
             # 6. Analyse technique (sans sous-section 6.1 s'il n'y a qu'une seule analyse)
             log_analysis = analysis.get("analysis", {}).get("log_analysis", {})
             if log_analysis:
-                elements.append(Paragraph("6. Analyse technique", styles['heading1']))
+                elements.append(Paragraph("7. Analyse technique", styles['heading1']))
 
                 # Type d'acquisition et durée
                 acquisition_type = log_analysis.get("acquisition_type", "inconnu")
@@ -944,16 +995,16 @@ class ReportGenerator:
                                not error.startswith("Impossible de charger les données d'acquisition")]
 
             if filtered_errors or warnings:
-                elements.append(Paragraph("7. Problèmes détectés", styles['heading1']))
+                elements.append(Paragraph("8. Problèmes détectés", styles['heading1']))
 
                 if filtered_errors:
-                    elements.append(Paragraph("7.1 Erreurs critiques", styles['heading2']))
+                    elements.append(Paragraph("8.1 Erreurs critiques", styles['heading2']))
                     for error in filtered_errors:
                         elements.append(Paragraph(f"• <font color='red'>{error}</font>", styles['normal']))
                     elements.append(Spacer(1, 0.15 * inch))
 
                 if warnings:
-                    elements.append(Paragraph("7.2 Avertissements", styles['heading2']))
+                    elements.append(Paragraph("8.2 Avertissements", styles['heading2']))
                     for warning in warnings:
                         elements.append(Paragraph(f"• <font color='orange'>{warning}</font>", styles['normal']))
                     elements.append(Spacer(1, 0.15 * inch))
@@ -1070,7 +1121,7 @@ class ReportGenerator:
 
                         # Deuxième graphique de la paire (s'il existe)
                         if i + 1 < len(reference_graphs) and os.path.exists(reference_graphs[i + 1]):
-                            logger.debug(f"Ajout du graphique: {reference_graphs[i+1]}")
+                            logger.debug(f"Ajout du graphique: {reference_graphs[i + 1]}")
                             graph_row.append(Image(reference_graphs[i + 1], width=3.5 * inch, height=2.5 * inch))
                         else:
                             graph_row.append("")
@@ -1126,7 +1177,7 @@ class ReportGenerator:
 
                         # Deuxième graphique de la paire (s'il existe)
                         if i + 1 < len(enzymo_graphs) and os.path.exists(enzymo_graphs[i + 1]):
-                            logger.debug(f"Ajout du graphique: {enzymo_graphs[i+1]}")
+                            logger.debug(f"Ajout du graphique: {enzymo_graphs[i + 1]}")
                             graph_row.append(Image(enzymo_graphs[i + 1], width=3.5 * inch, height=2.5 * inch))
                         else:
                             graph_row.append("")

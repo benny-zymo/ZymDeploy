@@ -691,6 +691,11 @@ class Step2Checks(StepFrame):
         # Déterminer si l'installation est valide (TOUS les checks doivent être valides)
         self.installation_valid = self._calculate_global_validity()
 
+        # Activer l'option "Modifier config.ini" dans le menu Actions
+        if hasattr(self.main_window, 'edit_config_action'):
+            self.main_window.edit_config_action.setEnabled(True)
+            logger.debug("Action 'Modifier config.ini' activée après analyse")
+
         if self.installation_valid:
             self.status_label.setText("Installation valide")
             self.status_label.setStyleSheet(
@@ -1241,7 +1246,13 @@ class Step2Checks(StepFrame):
 
             # ajouter valid au dic à envoyer au report generator
             self.check_results["installation_valid"] = self.installation_valid
-            report_path = report_generator.generate_step2_report(self.check_results)
+            step1_results = self.main_window.session_data.get("client_info", {})
+            installation_id = self.main_window.session_data.get("installation_id", "")
+
+            # append installation_id to step1_results
+            step1_results["installation_id"] = installation_id
+
+            report_path = report_generator.generate_step2_report(self.check_results, step1_results)
 
             # Affichage du message de succès
             QMessageBox.information(self.widget, "Rapport", f"Le rapport a été généré avec succès:\n{report_path}")
@@ -1350,5 +1361,10 @@ class Step2Checks(StepFrame):
 
         # Retourner à l'état initial
         self._show_initial_state()
+
+        # Désactiver l'option "Modifier config.ini" dans le menu Actions
+        if hasattr(self.main_window, 'edit_config_action'):
+            self.main_window.edit_config_action.setEnabled(False)
+            logger.debug("Action 'Modifier config.ini' désactivée après réinitialisation")
 
         logger.info("Étape 2 réinitialisée")

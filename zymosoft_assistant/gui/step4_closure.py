@@ -200,7 +200,7 @@ class Step4Closure(StepFrame):
 
             # Récupérer les informations sur les vérifications
             checks = self.main_window.session_data.get("step2_checks", {})
-            checks_status = "✓ Réussies" if checks.get("all_passed", False) else "✗ Échouées"
+            checks_status = "✓ Réussies" if checks.get("installation_valid", False) else "✗ Échouées"
 
             # Récupérer les informations sur les acquisitions
             acquisitions = self.main_window.session_data.get("acquisitions", [])
