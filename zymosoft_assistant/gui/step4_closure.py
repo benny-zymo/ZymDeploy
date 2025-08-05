@@ -4,18 +4,18 @@
 """
 Module de l'étape 4 de l'assistant d'installation ZymoSoft : Clôture de l'installation
 """
-
+import configparser
 import os
 import logging
 import threading
 import time
 import shutil
-from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout, 
-                            QPushButton, QFrame, QFileDialog, QMessageBox,
-                            QProgressBar, QTabWidget, QWidget, QScrollArea,
-                            QTableWidget, QTableWidgetItem, QHeaderView,
-                            QCheckBox, QRadioButton, QGroupBox, QTextEdit,
-                            QTreeWidget, QTreeWidgetItem)
+from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
+                             QPushButton, QFrame, QFileDialog, QMessageBox,
+                             QProgressBar, QTabWidget, QWidget, QScrollArea,
+                             QTableWidget, QTableWidgetItem, QHeaderView,
+                             QCheckBox, QRadioButton, QGroupBox, QTextEdit,
+                             QTreeWidget, QTreeWidgetItem, QDialog)
 from PyQt5.QtCore import Qt, pyqtSignal, QVariant
 from PyQt5.QtGui import QPixmap
 
@@ -408,111 +408,38 @@ class Step4Closure(StepFrame):
 
     def _set_client_mode(self):
         """
-        Passe ZymoSoft en mode client (ExpertMode=false)
+        Passe ZymoSoft en mode client (ExpertMode=false) en utilisant configparser
         """
         try:
-            # Récupérer le chemin du fichier Config.ini
-            zymosoft_path = self.main_window.session_data.get("zymosoft_path", "")
-
-            if not zymosoft_path:
-                logger.warning("Chemin ZymoSoft non défini dans les données de session")
-                # Utiliser le chemin par défaut
+            config_path = self.main_window.session_data.get("step2_checks", {}).get("zymosoft_path", "")
+            if not config_path:
                 from zymosoft_assistant.utils.constants import ZYMOSOFT_BASE_PATH
-                zymosoft_path = ZYMOSOFT_BASE_PATH
+                config_path = ZYMOSOFT_BASE_PATH
 
-            config_path = os.path.join(zymosoft_path, "etc", "Config.ini")
+            config_path = os.path.join(config_path, "etc", "Config.ini")
 
-            # Vérifier si le dossier etc existe
-            etc_dir = os.path.join(zymosoft_path, "etc")
-            if not os.path.exists(etc_dir):
-                try:
-                    os.makedirs(etc_dir, exist_ok=True)
-                    logger.info(f"Dossier etc créé: {etc_dir}")
-                except Exception as e:
-                    logger.error(f"Impossible de créer le dossier etc: {str(e)}")
-                    # Continuer malgré l'erreur
+            config = configparser.ConfigParser()
 
-            # Vérifier si le fichier Config.ini existe
-            if not os.path.exists(config_path):
-                logger.warning(f"Fichier Config.ini introuvable: {config_path}")
-                # Créer un fichier Config.ini minimal
-                try:
-                    with open(config_path, 'w') as f:
-                        f.write("[Application]\nExpertMode=false\n")
-                    logger.info(f"Fichier Config.ini créé: {config_path}")
-                    self.actions_status["client_mode"] = True
-                    return
-                except Exception as e:
-                    logger.error(f"Impossible de créer le fichier Config.ini: {str(e)}")
-                    # Ne pas lever d'exception, juste marquer l'action comme échouée
-                    self.actions_status["client_mode"] = False
-                    return
+            # Read the configuration file, allowing it to be missing
+            config.read(config_path)
 
-            # Lire le fichier
-            try:
-                with open(config_path, 'r') as f:
-                    lines = f.readlines()
-            except Exception as e:
-                logger.error(f"Erreur lors de la lecture du fichier Config.ini: {str(e)}")
-                # Créer un nouveau fichier
-                try:
-                    with open(config_path, 'w') as f:
-                        f.write("[Application]\nExpertMode=false\n")
-                    logger.info(f"Fichier Config.ini recréé: {config_path}")
-                    self.actions_status["client_mode"] = True
-                    return
-                except Exception as e2:
-                    logger.error(f"Impossible de créer le fichier Config.ini: {str(e2)}")
-                    self.actions_status["client_mode"] = False
-                    return
+            # Ensure the [Application] section exists
+            if 'Application' not in config:
+                config['Application'] = {}
 
-            # Modifier la ligne ExpertMode
-            modified = False
-            for i, line in enumerate(lines):
-                if line.strip().startswith("ExpertMode="):
-                    lines[i] = "ExpertMode=false\n"
-                    modified = True
-                    break
+            # Set the expertmode to false
+            config['Application']['expertmode'] = 'false'
 
-            if not modified:
-                # Si la ligne n'existe pas, l'ajouter dans la section [Application]
-                application_section_found = False
-                for i, line in enumerate(lines):
-                    if line.strip() == "[Application]":
-                        application_section_found = True
-                        # Trouver la fin de la section
-                        for j in range(i+1, len(lines)):
-                            if lines[j].strip().startswith("["):
-                                # Insérer avant la prochaine section
-                                lines.insert(j, "ExpertMode=false\n")
-                                modified = True
-                                break
-                        if not modified:
-                            # Si pas d'autre section, ajouter à la fin
-                            lines.append("ExpertMode=false\n")
-                            modified = True
-                        break
+            # Write the changes back to the file
+            with open(config_path, 'w') as f:
+                config.write(f)
 
-                if not application_section_found:
-                    # Si la section [Application] n'existe pas, la créer
-                    lines.append("\n[Application]\n")
-                    lines.append("ExpertMode=false\n")
-                    modified = True
-
-            # Écrire le fichier modifié
-            try:
-                with open(config_path, 'w') as f:
-                    f.writelines(lines)
-                logger.info(f"Mode client activé dans {config_path}")
-                self.actions_status["client_mode"] = True
-            except Exception as e:
-                logger.error(f"Erreur lors de l'écriture du fichier Config.ini: {str(e)}")
-                self.actions_status["client_mode"] = False
+            logger.info(f"Mode client activé dans {config_path}")
+            self.actions_status["client_mode"] = True
 
         except Exception as e:
             logger.error(f"Erreur lors du passage en mode client: {str(e)}", exc_info=True)
             self.actions_status["client_mode"] = False
-            # Ne pas lever d'exception pour éviter d'interrompre le processus de finalisation
 
     def _clean_pc(self):
         """
@@ -522,18 +449,24 @@ class Step4Closure(StepFrame):
         try:
             items_to_clean = []
 
-            # 1. Trouver le dossier Diag/Temp
-            diag_temp_path = os.path.join("C:", "Users", "Public", "Zymoptiq", "Diag", "Temp")
+            # 1. Trouver le dossier Diag/Temp  en utilisant le chemin du zymosoft , le fichier diag se trouve au même niveau que le dossier du zymosoft
+            zymosoft_path = self.main_window.session_data.get("step2_checks", {}).get("zymosoft_path", "")
+            # diag n'est pas un sous dossier de zymosoft, il est au même niveau
+            # sachant que zymosoft_path est le chemin vers le dossier zymosoft
+            diag_temp_path = os.path.join(os.path.dirname(zymosoft_path), "Diag", "Temp")
             if os.path.exists(diag_temp_path):
+                logger.info(f"Dossier Diag/Temp trouvé: {diag_temp_path}")
                 items_to_clean.append(diag_temp_path)
 
             # 2. Trouver les dossiers d'acquisition de test
             acquisitions = self.main_window.session_data.get("acquisitions", [])
+            logger.info(f"Nombre d'acquisitions trouvées: {len(acquisitions)}")
+            logger.info(f'Acquisitions: {acquisitions}')
             for acquisition in acquisitions:
                 results_folder = acquisition.get("results_folder", "")
+                logger.info(f'Vérification du dossier d\'acquisition: {results_folder}')
                 # On ne cible que les acquisitions invalidées ou celles contenant "test"
                 if results_folder and os.path.exists(results_folder):
-                    if not acquisition.get("validated", True) or "test" in results_folder.lower():
                         items_to_clean.append(results_folder)
 
             if not items_to_clean:

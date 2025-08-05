@@ -275,8 +275,13 @@ class ConfigChecker:
             logger.error(f"Fichier PlateConfig.ini non trouvé: {config_path}")
             return {"config_valid": False, "errors": ["Fichier PlateConfig.ini non trouvé"]}
 
-        config = configparser.ConfigParser()
-        config.read(config_path, encoding='utf-8-sig')
+        try:
+
+            config = configparser.ConfigParser()
+            config.read(config_path, encoding='utf-8-sig')
+        except configparser.Error as e:
+            logger.error(f"Erreur de lecture du fichier PlateConfig.ini: {e}")
+            return {"config_valid": False, "errors": [f"Erreur de lecture du fichier PlateConfig.ini: {e}"]}
 
         results = {
             "config_valid": True,
