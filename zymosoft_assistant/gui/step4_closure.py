@@ -22,6 +22,7 @@ from PyQt5.QtGui import QPixmap
 from zymosoft_assistant.utils.constants import COLOR_SCHEME, APP_CONFIG
 from zymosoft_assistant.core.report_generator import ReportGenerator
 from .step_frame import StepFrame
+from .clean_pc_dialog import CleanPCDialog
 
 logger = logging.getLogger(__name__)
 
@@ -285,7 +286,8 @@ class Step4Closure(StepFrame):
 
     def _execute_actions(self):
         """
-        Exécute les actions de finalisation dans un thread séparé
+        Exécute les actions de finalisation. Le nettoyage du PC est fait dans le thread principal
+        à cause de la boîte de dialogue, le reste est fait ici.
         """
         try:
             # Passer en mode client
@@ -293,38 +295,63 @@ class Step4Closure(StepFrame):
                 self._update_progress(10, "Passage en mode client...")
                 try:
                     self._set_client_mode()
+                    self.actions_status["client_mode"] = True
                 except Exception as e:
                     logger.error(f"Erreur lors du passage en mode client: {str(e)}", exc_info=True)
-                    # Continuer malgré l'erreur
-                time.sleep(0.5)  # Simuler un traitement
+                    self.actions_status["client_mode"] = False
+                time.sleep(0.5)
 
-            # Nettoyer le PC
-            if self.clean_pc_var:
-                self._update_progress(30, "Nettoyage du PC...")
-                try:
-                    self._clean_pc()
-                except Exception as e:
-                    logger.error(f"Erreur lors du nettoyage du PC: {str(e)}", exc_info=True)
-                    # Continuer malgré l'erreur
-                time.sleep(0.5)  # Simuler un traitement
+            # Le nettoyage du PC est géré séparément
+            self._update_progress(30, "En attente de l'action de nettoyage...")
 
+            # Utiliser QTimer pour appeler la méthode de nettoyage dans le thread principal
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(0, self._handle_pc_cleanup)
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la finalisation: {str(e)}", exc_info=True)
+            error_message = str(e)
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(0, lambda: self._handle_finalization_error(error_message))
+
+    def _handle_pc_cleanup(self):
+        """
+        Gère le nettoyage du PC, y compris l'affichage de la boîte de dialogue.
+        Cette méthode est exécutée dans le thread principal.
+        """
+        if self.clean_pc_var:
+            cleanup_success = self._clean_pc()
+            self.actions_status["clean_pc"] = cleanup_success
+            if not cleanup_success:
+                # L'utilisateur a annulé ou une erreur est survenue
+                self._handle_finalization_error("L'opération de nettoyage a été annulée ou a échoué.")
+                return
+        else:
+            self.actions_status["clean_pc"] = True # L'action n'était pas requise, donc on la considère comme réussie
+
+        # Continuer avec le reste des actions dans un thread
+        threading.Thread(target=self._continue_actions_after_cleanup, daemon=True).start()
+
+    def _continue_actions_after_cleanup(self):
+        """
+        Continue les actions de finalisation après le nettoyage du PC.
+        """
+        try:
             # Générer le rapport final
             self._update_progress(60, "Génération du rapport final...")
             try:
                 self._do_generate_final_report()
             except Exception as e:
                 logger.error(f"Erreur lors de la génération du rapport final: {str(e)}", exc_info=True)
-                # Continuer malgré l'erreur
-            time.sleep(0.5)  # Simuler un traitement
+            time.sleep(0.5)
 
             # Finalisation
             self._update_progress(100, "Installation finalisée avec succès.")
 
-            # Mettre à jour l'interface dans le thread principal
             from PyQt5.QtCore import QTimer
             QTimer.singleShot(0, self._finalization_completed)
         except Exception as e:
-            logger.error(f"Erreur lors de la finalisation: {str(e)}", exc_info=True)
+            logger.error(f"Erreur après le nettoyage: {str(e)}", exc_info=True)
             error_message = str(e)
             from PyQt5.QtCore import QTimer
             QTimer.singleShot(0, lambda: self._handle_finalization_error(error_message))
@@ -489,47 +516,45 @@ class Step4Closure(StepFrame):
 
     def _clean_pc(self):
         """
-        Nettoie le PC en supprimant les données d'acquisitions de test et en vidant le dossier Diag/Temp
+        Ouvre une boîte de dialogue pour permettre à l'utilisateur de nettoyer le PC de manière sélective.
+        Retourne True si l'opération est réussie ou si l'utilisateur annule, False en cas d'échec.
         """
         try:
-            # Récupérer le chemin de ZymoSoft
-            zymosoft_path = self.main_window.session_data.get("zymosoft_path", "")
+            items_to_clean = []
 
-            # Vider le dossier Diag/Temp
+            # 1. Trouver le dossier Diag/Temp
             diag_temp_path = os.path.join("C:", "Users", "Public", "Zymoptiq", "Diag", "Temp")
-
             if os.path.exists(diag_temp_path):
-                # Supprimer tous les fichiers du dossier
-                for filename in os.listdir(diag_temp_path):
-                    file_path = os.path.join(diag_temp_path, filename)
-                    try:
-                        if os.path.isfile(file_path):
-                            os.unlink(file_path)
-                        elif os.path.isdir(file_path):
-                            shutil.rmtree(file_path)
-                    except Exception as e:
-                        logger.warning(f"Erreur lors de la suppression de {file_path}: {str(e)}")
+                items_to_clean.append(diag_temp_path)
 
-                logger.info(f"Dossier Diag/Temp vidé: {diag_temp_path}")
-            else:
-                logger.warning(f"Dossier Diag/Temp introuvable: {diag_temp_path}")
-
-            # Supprimer les acquisitions de test
-            # Récupérer les dossiers d'acquisition
+            # 2. Trouver les dossiers d'acquisition de test
             acquisitions = self.main_window.session_data.get("acquisitions", [])
             for acquisition in acquisitions:
                 results_folder = acquisition.get("results_folder", "")
-                if results_folder and os.path.exists(results_folder) and "test" in results_folder.lower():
-                    try:
-                        shutil.rmtree(results_folder)
-                        logger.info(f"Dossier d'acquisition supprimé: {results_folder}")
-                    except Exception as e:
-                        logger.warning(f"Erreur lors de la suppression de {results_folder}: {str(e)}")
+                # On ne cible que les acquisitions invalidées ou celles contenant "test"
+                if results_folder and os.path.exists(results_folder):
+                    if not acquisition.get("validated", True) or "test" in results_folder.lower():
+                        items_to_clean.append(results_folder)
 
-            self.actions_status["clean_pc"] = True
+            if not items_to_clean:
+                QMessageBox.information(self.widget, "Nettoyage", "Aucun élément à nettoyer n'a été trouvé.")
+                return True
+
+            # Afficher la boîte de dialogue
+            dialog = CleanPCDialog(items_to_clean, self.widget)
+            result = dialog.exec_()
+
+            if result == QDialog.Accepted:
+                logger.info("Nettoyage du PC effectué avec succès via la boîte de dialogue.")
+                return True
+            else:
+                logger.warning("L'utilisateur a annulé le nettoyage du PC.")
+                return False # L'utilisateur a annulé
+
         except Exception as e:
-            logger.error(f"Erreur lors du nettoyage du PC: {str(e)}", exc_info=True)
-            raise
+            logger.error(f"Erreur lors de la préparation du nettoyage du PC: {str(e)}", exc_info=True)
+            QMessageBox.critical(self, "Erreur", f"Une erreur est survenue lors de la préparation du nettoyage:\n{e}")
+            return False
 
     def _generate_final_report(self):
         """
