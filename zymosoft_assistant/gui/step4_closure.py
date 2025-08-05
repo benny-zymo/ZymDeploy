@@ -136,15 +136,41 @@ class Step4Closure(StepFrame):
         clean_pc_desc.setContentsMargins(30, 0, 0, 5)
         actions_layout.addWidget(clean_pc_desc)
 
-        # Résumé de l'installation
+        # Résumé de l'installation (amélioré)
         summary_frame = QGroupBox("Résumé de l'installation")
         summary_layout = QVBoxLayout(summary_frame)
         right_panel_layout.addWidget(summary_frame)
 
-        self.summary_text = QTextEdit()
-        self.summary_text.setMinimumHeight(150)
-        self.summary_text.setReadOnly(True)
-        summary_layout.addWidget(self.summary_text)
+        # Utilisation de labels pour un affichage plus propre
+        self.summary_client_label = QLabel("Client: Non spécifié")
+        summary_layout.addWidget(self.summary_client_label)
+
+        self.summary_cs_label = QLabel("Responsable CS: Non spécifié")
+        summary_layout.addWidget(self.summary_cs_label)
+
+        self.summary_instrumentation_label = QLabel("Responsable instrumentation: Non spécifié")
+        summary_layout.addWidget(self.summary_instrumentation_label)
+
+        summary_layout.addSpacing(10)
+
+        self.summary_checks_label = QLabel("Vérifications: Non effectuées")
+        summary_layout.addWidget(self.summary_checks_label)
+
+        self.summary_acquisitions_label = QLabel("Acquisitions validées: 0/0")
+        summary_layout.addWidget(self.summary_acquisitions_label)
+
+        summary_layout.addSpacing(10)
+
+        self.summary_actions_label = QLabel("Actions à effectuer:")
+        summary_layout.addWidget(self.summary_actions_label)
+
+        self.summary_client_mode_label = QLabel("- Passer en mode client")
+        self.summary_client_mode_label.setStyleSheet("padding-left: 15px;")
+        summary_layout.addWidget(self.summary_client_mode_label)
+
+        self.summary_clean_pc_label = QLabel("- Nettoyer le PC")
+        self.summary_clean_pc_label.setStyleSheet("padding-left: 15px;")
+        summary_layout.addWidget(self.summary_clean_pc_label)
 
         # Barre de progression
         self.progress_frame = QWidget()
@@ -161,65 +187,41 @@ class Step4Closure(StepFrame):
         self.progress_label.setAlignment(Qt.AlignLeft)
         progress_layout.addWidget(self.progress_label)
 
-        # Boutons d'action
-        buttons_frame = QWidget()
-        buttons_layout = QHBoxLayout(buttons_frame)
-        buttons_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(buttons_frame)
-
-        self.prev_step_button = QPushButton("Étape précédente")
-        self.prev_step_button.clicked.connect(self.main_window.previous_step)
-        buttons_layout.addWidget(self.prev_step_button, 0, Qt.AlignLeft)
-
-        self.finalize_button = QPushButton("Finaliser l'installation")
-        self.finalize_button.clicked.connect(self._finalize_installation)
-        self.finalize_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
-        buttons_layout.addWidget(self.finalize_button, 0, Qt.AlignRight)
-
-        # Bouton pour générer le rapport final
-        self.report_button = QPushButton("Générer rapport final")
-        self.report_button.clicked.connect(self._generate_final_report)
-        self.report_button.setEnabled(False)
-        buttons_layout.addWidget(self.report_button, 0, Qt.AlignRight)
+        # Les boutons de navigation sont maintenant gérés par la fenêtre principale
+        # pour une expérience utilisateur cohérente.
+        # Le bouton "Terminer" de la fenêtre principale déclenchera la finalisation.
 
     def _update_summary(self):
         """
-        Met à jour le résumé de l'installation
+        Met à jour le résumé de l'installation avec les nouveaux labels
         """
         try:
-            # Vérifier si summary_text existe
-            if self.summary_text is None:
-                logger.error("Erreur dans _update_summary: self.summary_text est None")
-                return
-
             # Récupérer les informations client
             client_info = self.main_window.session_data.get("client_info", {})
-            client_name = client_info.get("name", "Non spécifié")
-            cs_responsible = client_info.get("cs_responsible", "Non spécifié")
-            instrumentation_responsible = client_info.get("instrumentation_responsible", "Non spécifié")
+            self.summary_client_label.setText(f"Client: {client_info.get('name', 'Non spécifié')}")
+            self.summary_cs_label.setText(f"Responsable CS: {client_info.get('cs_responsible', 'Non spécifié')}")
+            self.summary_instrumentation_label.setText(f"Responsable instrumentation: {client_info.get('instrumentation_responsible', 'Non spécifié')}")
 
             # Récupérer les informations sur les vérifications
             checks = self.main_window.session_data.get("step2_checks", {})
-            checks_status = "✓ Réussies" if checks.get("installation_valid", False) else "✗ Échouées"
+            if checks:
+                checks_status = "✓ Réussies" if checks.get("installation_valid", False) else "✗ Échouées"
+                self.summary_checks_label.setText(f"Vérifications: {checks_status}")
+            else:
+                self.summary_checks_label.setText("Vérifications: Non effectuées")
 
             # Récupérer les informations sur les acquisitions
             acquisitions = self.main_window.session_data.get("acquisitions", [])
             valid_acquisitions = [acq for acq in acquisitions if acq.get("validated", False)]
+            self.summary_acquisitions_label.setText(f"Acquisitions validées: {len(valid_acquisitions)}/{len(acquisitions)}")
 
-            # Construire le résumé
-            summary = (
-                f"Client: {client_name}\n"
-                f"Responsable CS: {cs_responsible}\n"
-                f"Responsable instrumentation: {instrumentation_responsible}\n\n"
-                f"Vérifications: {checks_status}\n"
-                f"Acquisitions validées: {len(valid_acquisitions)}/{len(acquisitions)}\n\n"
-                f"Actions à effectuer:\n"
-                f"- {'✓' if self.client_mode_var else '✗'} Passer en mode client\n"
-                f"- {'✓' if self.clean_pc_var else '✗'} Nettoyer le PC\n"
-            )
+            # Mettre à jour les actions à effectuer
+            client_mode_icon = '✓' if self.client_mode_var else '✗'
+            self.summary_client_mode_label.setText(f"- {client_mode_icon} Passer en mode client")
 
-            # Mettre à jour le texte
-            self.summary_text.setPlainText(summary)
+            clean_pc_icon = '✓' if self.clean_pc_var else '✗'
+            self.summary_clean_pc_label.setText(f"- {clean_pc_icon} Nettoyer le PC")
+
         except Exception as e:
             logger.error(f"Erreur dans _update_summary: {str(e)}", exc_info=True)
 
@@ -278,43 +280,8 @@ class Step4Closure(StepFrame):
         except Exception as e:
             logger.error(f"Erreur dans _update_history: {str(e)}", exc_info=True)
 
-    def _finalize_installation(self):
-        """
-        Finalise l'installation en appliquant les actions sélectionnées
-        """
-        # Récupérer les commentaires
-        self.general_comments = self.comments_text.toPlainText().strip()
-
-        # Vérifier que les étapes précédentes sont valides
-        if not self._validate_previous_steps():
-            return
-
-        # Confirmer les actions
-        reply = QMessageBox.question(
-            self.widget,
-            "Confirmation",
-            "Êtes-vous sûr de vouloir finaliser l'installation ?\n\n"
-            "Les actions sélectionnées seront appliquées et un rapport final sera généré.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-
-        if reply != QMessageBox.Yes:
-            return
-
-        # Désactiver les boutons pendant le traitement
-        self.finalize_button.setEnabled(False)
-        self.prev_step_button.setEnabled(False)
-
-        # Réinitialiser la barre de progression
-        self.progress_bar.setValue(0)
-        self.progress_label.setText("Préparation...")
-
-        # Sauvegarder les données
-        self.save_data()
-
-        # Lancer les actions dans un thread séparé
-        threading.Thread(target=self._execute_actions, daemon=True).start()
+    # La méthode _finalize_installation a été supprimée car la logique de finalisation
+    # est maintenant initiée par la MainWindow pour une meilleure centralisation du contrôle.
 
     def _execute_actions(self):
         """
@@ -395,24 +362,22 @@ class Step4Closure(StepFrame):
         QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue lors de la finalisation:\n{error_message}")
         self.progress_label.setText(f"Erreur: {error_message}")
 
-        # Réactiver les boutons
-        self.finalize_button.setEnabled(True)
-        self.prev_step_button.setEnabled(True)
+        # Les boutons sont gérés par la fenêtre principale, qui sera informée de l'erreur.
+        # On peut envisager un signal pour communiquer l'état.
+        self.main_window.on_finalization_error()
+
 
     def _finalization_completed(self):
         """
         Appelé lorsque la finalisation est terminée avec succès
         """
         # Afficher un message de succès
-        QMessageBox.information(self.widget, "Succès", 
+        QMessageBox.information(self.widget, "Succès",
                                "L'installation a été finalisée avec succès.\n\n"
-                               "Un rapport final a été généré.")
+                               "Le rapport final fusionné a été généré.")
 
-        # Activer le bouton de rapport
-        self.report_button.setEnabled(True)
-
-        # Réactiver le bouton précédent
-        self.prev_step_button.setEnabled(True)
+        # Informer la fenêtre principale que la finalisation est terminée
+        self.main_window.on_finalization_success()
 
     def _set_client_mode(self):
         """
@@ -594,10 +559,9 @@ class Step4Closure(StepFrame):
         report_generator = ReportGenerator()
 
         # Préparation des données pour le rapport
-        report_data = {
-            "client_info": self.main_window.session_data.get("client_info", {}),
-            "step2_checks": self.main_window.session_data.get("step2_checks", {}),
-            "acquisitions": self.main_window.session_data.get("acquisitions", []),
+        # La méthode generate_final_report attend maintenant le dictionnaire de session complet
+        full_data = self.main_window.session_data.copy()
+        full_data.update({
             "general_comments": self.general_comments,
             "actions": {
                 "client_mode": self.client_mode_var,
@@ -605,10 +569,10 @@ class Step4Closure(StepFrame):
             },
             "actions_status": self.actions_status,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-        }
+        })
 
-        # Génération du rapport
-        report_path = report_generator.generate_final_report(report_data)
+        # Génération du rapport fusionné
+        report_path = report_generator.generate_final_report(full_data)
 
         # Stocker le chemin du rapport dans les données de session
         self.main_window.session_data["final_report_path"] = report_path
@@ -667,8 +631,8 @@ class Step4Closure(StepFrame):
 
     def execute_cleanup_actions(self):
         """
-        Exécute les actions de nettoyage lors de la finalisation
-        Cette méthode est appelée par la fenêtre principale lors de la finalisation
+        Exécute les actions de nettoyage lors de la finalisation dans un thread séparé.
+        Cette méthode est appelée par la fenêtre principale lors de la finalisation.
         """
         # Récupérer les commentaires
         self.general_comments = self.comments_text.toPlainText().strip()
@@ -676,8 +640,13 @@ class Step4Closure(StepFrame):
         # Sauvegarder les données
         self.save_data()
 
-        # Exécuter les actions directement (sans thread)
-        self._execute_actions()
+        # Réinitialiser la barre de progression
+        self.progress_bar.setValue(0)
+        self.progress_label.setText("Préparation de la finalisation...")
+
+        # Lancer les actions dans un thread séparé pour ne pas bloquer l'UI
+        action_thread = threading.Thread(target=self._execute_actions, daemon=True)
+        action_thread.start()
 
         return True
 

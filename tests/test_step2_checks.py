@@ -14,15 +14,18 @@ class TestStep2ChecksReset(unittest.TestCase):
         self.main_window.session_data = {}  # Mock session data
 
         # We need to patch the super().__init__ call in StepFrame to avoid creating a QWidget
-        with patch("zymosoft_assistant.gui.step_frame.StepFrame.__init__", return_value=None):
+        with patch("zymosoft_assistant.gui.step_frame.StepFrame.__init__", return_value=None), \
+             patch("zymosoft_assistant.gui.step2_checks.Step2Checks.create_widgets", return_value=None):
             self.step2_checks = Step2Checks(self.parent, self.main_window)
 
-        # Mocking UI elements required for the reset function
+        # Mocking UI elements and other attributes required for the reset function
         self.step2_checks.folder_display_label = MagicMock()
         self.step2_checks.start_analysis_button = MagicMock()
         self.step2_checks.progress_bar = MagicMock()
         self.step2_checks.progress_label = MagicMock()
         self.step2_checks._show_initial_state = MagicMock()
+        self.step2_checks.main_window = MagicMock()
+        self.step2_checks.main_window.edit_config_action = MagicMock()
 
     def test_reset_clears_zymosoft_path(self):
         self.step2_checks.zymosoft_path = "some/path"

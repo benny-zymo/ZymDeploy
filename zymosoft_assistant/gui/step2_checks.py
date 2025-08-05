@@ -1254,6 +1254,10 @@ class Step2Checks(StepFrame):
 
             report_path = report_generator.generate_step2_report(self.check_results, step1_results)
 
+            # Sauvegarder le chemin du rapport dans la session
+            self.main_window.session_data["step2_report_path"] = report_path
+            logger.info(f"Chemin du rapport de l'étape 2 sauvegardé dans la session: {report_path}")
+
             # Affichage du message de succès
             QMessageBox.information(self.widget, "Rapport", f"Le rapport a été généré avec succès:\n{report_path}")
 
