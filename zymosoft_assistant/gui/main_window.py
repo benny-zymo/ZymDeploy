@@ -13,12 +13,13 @@ import datetime
 import json
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QProgressBar, QMessageBox,
-                             QFileDialog, QStackedWidget, QAction, QMenu, QMenuBar)
+                             QFileDialog, QStackedWidget, QAction, QMenu, QMenuBar, QDialog)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
 from zymosoft_assistant.utils.constants import COLOR_SCHEME, APP_CONFIG, STEPS, PLATE_TYPES, ACQUISITION_MODES
 from zymosoft_assistant.utils.helpers import create_empty_session, save_session_data, load_session_data
+from .config_editor_dialog import ConfigEditorDialog
 from .step1_info import Step1Info
 from .step2_checks import Step2Checks
 from .step3_acquisition import Step3Acquisition
@@ -429,6 +430,15 @@ border: none;
         quit_action.triggered.connect(self.quit_app)
         file_menu.addAction(quit_action)
 
+        # Menu Actions
+        actions_menu = menubar.addMenu("Actions")
+
+        # Action pour modifier config.ini
+        self.edit_config_action = QAction("Modifier config.ini", self)
+        self.edit_config_action.triggered.connect(self.open_config_editor)
+        self.edit_config_action.setEnabled(False)  # Désactivé par défaut
+        actions_menu.addAction(self.edit_config_action)
+
         # Menu Aide
         help_menu = menubar.addMenu("Aide")
 
@@ -565,6 +575,16 @@ border: none;
             if hasattr(self.steps[index], 'on_show') and callable(getattr(self.steps[index], 'on_show')):
                 logger.debug(f"Appel de la méthode on_show de l'étape {index + 1}")
                 self.steps[index].on_show()
+
+            # Mise à jour de l'état du menu "Modifier config.ini"
+            if hasattr(self, 'edit_config_action'):
+                # Activer l'action si on est à l'étape 2 ou plus et que le chemin ZymoSoft est défini
+                if index >= 1 and hasattr(self.steps[1], 'zymosoft_path') and self.steps[1].zymosoft_path:
+                    self.edit_config_action.setEnabled(True)
+                    logger.debug("Action 'Modifier config.ini' activée")
+                else:
+                    self.edit_config_action.setEnabled(False)
+                    logger.debug("Action 'Modifier config.ini' désactivée")
 
             logger.info(f"Affichage de l'étape {index + 1}: {STEPS[index]['title']} réussi")
         except Exception as e:
@@ -754,6 +774,48 @@ border: none;
                                 f"Assistant d'installation ZymoSoft\n"
                                 f"Version {APP_CONFIG['version']}\n\n"
                                 f"© 2025 Zymoptiq")
+
+    def open_config_editor(self):
+        """
+        Ouvre le dialogue d'édition du fichier config.ini
+        """
+        logger.info("Tentative d'ouverture du dialogue d'édition du fichier config.ini")
+
+        # Vérifier si l'étape 2 a été complétée ou si un scan a été lancé
+        if self.current_step_index < 1:  # Si on n'est pas encore à l'étape 2
+            QMessageBox.warning(self, "Action non disponible", 
+                               "Vous devez d'abord compléter l'étape 1 et lancer un scan à l'étape 2.")
+            return
+
+        # Récupérer le chemin ZymoSoft depuis l'étape 2
+        step2 = self.steps[1]
+        zymosoft_path = getattr(step2, 'zymosoft_path', None)
+
+        if not zymosoft_path:
+            QMessageBox.warning(self, "Chemin ZymoSoft non défini", 
+                               "Le chemin vers l'installation ZymoSoft n'a pas été défini. "
+                               "Veuillez d'abord lancer un scan à l'étape 2.")
+            return
+
+        # Vérifier si le chemin existe
+        if not os.path.exists(zymosoft_path):
+            QMessageBox.critical(self, "Erreur", 
+                                f"Le chemin ZymoSoft n'existe pas: {zymosoft_path}")
+            return
+
+        # Ouvrir le dialogue d'édition
+        try:
+            dialog = ConfigEditorDialog(self, zymosoft_path)
+            result = dialog.exec_()
+
+            if result == QDialog.Accepted:
+                logger.info("Configuration modifiée avec succès")
+            else:
+                logger.info("Modification de la configuration annulée")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'ouverture du dialogue d'édition: {str(e)}", exc_info=True)
+            QMessageBox.critical(self, "Erreur", 
+                                f"Une erreur est survenue lors de l'ouverture du dialogue d'édition:\n{str(e)}")
 
     def quit_app(self):
         """

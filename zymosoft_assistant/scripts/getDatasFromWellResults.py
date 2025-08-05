@@ -277,8 +277,12 @@ def calculateLODLOQComparison(acquisition_folder, reference_folder):
             lod_tolerance = calculate_lod_loq_tolerance(ref_results['lod'])
             loq_tolerance = calculate_lod_loq_tolerance(ref_results['loq'])
 
-            is_lod_valid = abs(diff_lod) <= lod_tolerance
-            is_loq_valid = abs(diff_loq) <= loq_tolerance
+            # Vérifier si les différences sont dans la tolérance
+            # La différence est considérée valide si elle est négative ou dans la tolérance
+            # Si la différence est négative, elle est toujours considérée valide (pas de déviation)
+            # Sinon, elle doit être dans la tolérance
+            is_lod_valid = True if diff_lod < 0 else  diff_lod <= lod_tolerance
+            is_loq_valid = True if diff_lod < 0 else diff_loq <= loq_tolerance
 
             print("is_lod_valid:", is_lod_valid, "is_loq_valid:", is_loq_valid)
 
@@ -449,13 +453,16 @@ def processWellResults(acquisition_folder, reference_folder):
         for i, activity in enumerate(acquisition_data['activity']):
             acquisition_value = acquisition_data['values'][i]
             reference_value = reference_data['values'][i]
-            diff = abs(acquisition_value - reference_value)  # Utiliser la différence absolue pour la validation
+            diff = acquisition_value - reference_value  # Utiliser la différence absolue pour la validation
 
             # Calculer la tolérance basée sur la valeur de référence
             tolerance = calculate_tolerance(reference_value)
 
             # Déterminer si la différence est dans la tolérance
-            is_valid = diff <= tolerance
+            # La différence est considérée valide si elle est négative ou dans la tolérance
+            # Si la différence est négative, elle est toujours considérée valide (pas de déviation)
+            # Sinon, elle doit être dans la tolérance
+            is_valid = True if diff < 0 else  diff <= tolerance
 
             final_results.append({
                 'activité': activity,

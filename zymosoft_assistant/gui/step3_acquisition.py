@@ -8,6 +8,7 @@ Fixed version addressing widget initialization issues
 
 import os
 import logging
+import shutil
 import threading
 import time
 import sys
@@ -713,6 +714,11 @@ class Step3Acquisition(StepFrame):
         self.results_folder_var = ""
         self.reference_folder_var = ""
         self.comments_var = ""
+        self.manual_validation = {
+            "time" : False,
+            "dift" : False,
+            "blur" : False
+        }
 
         # Variables pour la configuration de validation
         self.do_repeta_sans_ref = False  # Toujours désactivé pour un déploiement
@@ -2866,6 +2872,20 @@ class Step3Acquisition(StepFrame):
             message_label.setWordWrap(True)
             layout.addWidget(message_label)
 
+            options_layout = QVBoxLayout()
+            options_layout.setAlignment(Qt.AlignLeft)
+            self.check_acquisition_time = QCheckBox("Temps d'acquisition correct")
+            self.check_acquisition_time.setChecked(False)
+            options_layout.addWidget(self.check_acquisition_time)
+            self.check_drift = QCheckBox("Drift acceptable")
+            self.check_drift.setChecked(False)
+            options_layout.addWidget(self.check_drift)
+            self.check_blurriness = QCheckBox("Flou acceptable")
+            self.check_blurriness.setChecked(False)
+            options_layout.addWidget(self.check_blurriness)
+
+            layout.addLayout(options_layout)
+
             # Champ de commentaires
             comments_label = QLabel("Commentaires:")
             layout.addWidget(comments_label)
@@ -2891,8 +2911,30 @@ class Step3Acquisition(StepFrame):
             result = dialog.exec_()
 
             if result == QDialog.Accepted:
+                # Vérifier les options supplémentaires , si l'utilisateur voulais valider l'acquisition il doit cocher toutes les options supplémentaires si il voulais invalider rien ne l'oblige à cocher les options
+                if action_type == "validate_continue":
+                    if not (self.check_acquisition_time.isChecked() and self.check_drift.isChecked() and self.check_blurriness.isChecked()):
+                        QMessageBox.warning(self.widget, "Attention",
+                                            "Veuillez vérifier que toutes les options sont cochées avant de valider l'acquisition.")
+                        return False
+                elif action_type == "validate_next":
+                    if not (self.check_acquisition_time.isChecked() and self.check_drift.isChecked() and self.check_blurriness.isChecked()):
+                        QMessageBox.warning(self.widget, "Attention",
+                                            "Veuillez vérifier que toutes les options sont cochées avant de valider l'acquisition.")
+                        return False
+
+                # stocker les options supplémentaires dans l'analyse sous le nom "manuel_verfications"
+                self.manual_validation = {
+                    "time": self.check_acquisition_time.isChecked(),
+                    "drift": self.check_drift.isChecked(),
+                    "blur": self.check_blurriness.isChecked()
+                }
+                self.analysis_results['manual_validation'] = self.manual_validation
+
+
                 # Récupérer les commentaires
                 self.comments_var = comments_text.toPlainText().strip()
+
                 # Finaliser l'acquisition
                 self._finalize_acquisition(validated, continue_acquisitions)
                 return True
@@ -2923,7 +2965,8 @@ class Step3Acquisition(StepFrame):
                 "analysis": self.analysis_results,
                 "comments": comments,
                 "validated": validated,
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "manual_validations": self.manual_validation
             }
             self.acquisitions.append(acquisition)
             self._update_history()
@@ -2931,6 +2974,24 @@ class Step3Acquisition(StepFrame):
 
             # Generate the report automatically upon finalizing, with the correct status
             self._generate_acquisition_report(validated)
+
+            # copie the analised log file to the results folder
+            if self.results_folder_var:
+                from zymosoft_assistant.scripts.processAcquisitionLog import getLogFile, analyzeLogFile
+
+                step2_data = self.main_window.session_data.get("step2_checks", {})
+                log_file_path = None
+                zymosoft_path = step2_data.get("zymosoft_path")
+                if zymosoft_path and os.path.isdir(os.path.join(zymosoft_path, '..', 'Diag', 'Temp')):
+                    default_log_path = os.path.join(zymosoft_path, '..', 'Diag', 'Temp')
+                    log_file_path = getLogFile(default_log_path)
+
+                if log_file_path and os.path.exists(log_file_path):
+                    try:
+                        shutil.copy(log_file_path, self.results_folder_var)
+                        logger.info(f"Fichier de log copié dans le dossier des résultats: {self.results_folder_var}")
+                    except Exception as e:
+                        logger.error(f"Erreur lors de la copie du fichier de log: {str(e)}", exc_info=True)
 
             if continue_acquisitions:
                 self._reset_acquisition()
@@ -3056,10 +3117,12 @@ class Step3Acquisition(StepFrame):
                 'analysis': self.analysis_results,
                 'comments': self.comments_var,
                 'validated': validated_status,
-                'manual_validation': getattr(self, 'manual_validation_states', {})
+                'manual_validation': self.manual_validation
             }
 
-            report_path = report_generator.generate_acquisition_report(report_data)
+            step1_checks = self.main_window.session_data.get('client_info', {})
+
+            report_path = report_generator.generate_acquisition_report(report_data, step1_checks)
             QMessageBox.information(self.widget, "Rapport",
                                     f"Le rapport d'acquisition a été généré avec succès:\n{report_path}")
 
