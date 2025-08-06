@@ -1218,7 +1218,7 @@ class ReportGenerator:
                 try:
                     merger.append(pdf_path)
                 except Exception as e:
-                    logger.error(f"Impossible de fusionner le PDF {pdf_path}: {e}")
+                    logger.error(f"Impossible de fusionner le PDF {pdf_path}: {type(e).__name__}: {e}")
             else:
                 logger.warning(f"Le fichier PDF n'a pas été trouvé et sera ignoré: {pdf_path}")
 
