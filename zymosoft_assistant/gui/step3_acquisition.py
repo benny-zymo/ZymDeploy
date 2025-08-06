@@ -3097,7 +3097,7 @@ class Step3Acquisition(StepFrame):
 
     def _generate_acquisition_report(self, validated_status):
         """
-        Génère un rapport PDF pour l'acquisition actuelle, en utilisant le statut de validation fourni.
+        Génère un rapport PDF pour l'acquisition actuelle et sauvegarde son chemin.
         """
         try:
             if not self.analysis_results:
@@ -3123,6 +3123,14 @@ class Step3Acquisition(StepFrame):
             step1_checks = self.main_window.session_data.get('client_info', {})
 
             report_path = report_generator.generate_acquisition_report(report_data, step1_checks)
+
+            # Sauvegarder le chemin du rapport dans les données de l'acquisition
+            current_acquisition = next((acq for acq in self.acquisitions if acq['id'] == self.current_acquisition_id), None)
+            if current_acquisition:
+                current_acquisition['report_path'] = report_path
+                self.save_data() # Mettre à jour la session
+                logger.info(f"Chemin du rapport pour l'acquisition #{self.current_acquisition_id} sauvegardé: {report_path}")
+
             QMessageBox.information(self.widget, "Rapport",
                                     f"Le rapport d'acquisition a été généré avec succès:\n{report_path}")
 

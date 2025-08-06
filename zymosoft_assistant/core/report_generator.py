@@ -20,6 +20,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
 from jinja2 import Environment, FileSystemLoader
+from pypdf import PdfWriter
 
 logger = logging.getLogger(__name__)
 
@@ -369,7 +370,6 @@ class ReportGenerator:
         structure_checks = checks.get("structure", {})
         zymosoft_version = structure_checks.get('zymosoft_version', 'N/A')
         elements.append(Paragraph(f"Version ZymoSoft : <b>{zymosoft_version}</b>", styles['normal']))
-
         elements.append(Spacer(1, 0.2 * cm))
 
         # Section 2 : Erreurs et avertissements
@@ -431,14 +431,21 @@ class ReportGenerator:
         elements.append(Paragraph(f"Statut : <font color='{status_color}'>{status_text}</font>", styles['normal']))
         elements.append(Spacer(1, 0.1 * cm))
 
-        # Tableau des paramètres
+        # Vérifier la présence de ConfigLayer dans PlateConfig.ini
+        plate_config_ini_results = checks.get("plate_config_ini", {})
+        has_config_layer = any(
+            config.get("has_config_layer", False) for config in plate_config_ini_results.get("configs", {}).values())
+
+        # Liste des paramètres à vérifier, conditionnée par la présence de ConfigLayer
         checks_list = [
             ("Application.ExpertMode", "ExpertMode"),
             ("Application.ExportAcquisitionDetailResults", "ExportAcquisitionDetailResults"),
             ("Hardware.Controller", "Controller"),
             ("Interf.Worker", "Worker"),
-            ("Reflecto.Worker", "Worker")
         ]
+        if has_config_layer:
+            checks_list.append(("Reflecto.Worker", "Worker"))
+
         values = config_ini_results.get("values", {})
         data = [["Paramètre", "Valeur", "Statut"]]
 
@@ -454,7 +461,7 @@ class ReportGenerator:
                 for err in config_ini_results.get("errors", []):
                     if param.split(".")[1] in err:
                         displayed_errors.add(err)
-            elif value == "":
+            elif value == "" and param != "Reflecto.Worker":  # Ne pas marquer Reflecto.Worker comme erreur s'il est absent et non requis
                 statut = "✗"
             status_color = "green" if statut == "✓" else "red"
             data.append([param, str(value), f"<font color='{status_color}'>{statut}</font>"])
@@ -1197,253 +1204,179 @@ class ReportGenerator:
         except Exception as e:
             logger.error(f"Erreur lors de l'ajout des graphiques de calibration enzymatique: {str(e)}", exc_info=True)
 
-    def generate_final_report(self, full_data: Dict[str, Any]) -> str:
+    def _merge_pdfs(self, pdf_paths: List[str], output_path: str):
         """
-        Génère un rapport PDF final complet (étape 4)
+        Fusionne plusieurs fichiers PDF en un seul.
 
         Args:
-            full_data: Dictionnaire contenant toutes les données de l'installation
+            pdf_paths: Liste des chemins vers les fichiers PDF à fusionner.
+            output_path: Chemin du fichier PDF de sortie.
+        """
+        merger = PdfWriter()
+        for pdf_path in pdf_paths:
+            if pdf_path and os.path.exists(pdf_path):
+                try:
+                    merger.append(pdf_path)
+                except Exception as e:
+                    logger.error(f"Impossible de fusionner le PDF {pdf_path}: {type(e).__name__}: {e}")
+            else:
+                logger.warning(f"Le fichier PDF n'a pas été trouvé et sera ignoré: {pdf_path}")
+
+        try:
+            merger.write(output_path)
+            merger.close()
+            logger.info(f"PDFs fusionnés avec succès dans {output_path}")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'écriture du PDF fusionné: {e}")
+            raise
+
+    def generate_summary_report_page(self, full_data: Dict[str, Any]) -> Optional[str]:
+        """
+        Génère une seule page de résumé de l'installation au format PDF.
+
+        Args:
+            full_data: Dictionnaire contenant toutes les données de l'installation.
 
         Returns:
-            Chemin vers le fichier PDF généré
+            Chemin vers le fichier PDF temporaire généré, ou None en cas d'erreur.
         """
-        logger.info("Génération du rapport final (étape 4)")
+        logger.info("Génération de la page de résumé du rapport final")
 
         # Préparation des données
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         client_name = full_data.get("client_info", {}).get("name", "client").replace(" ", "_")
-        pdf_filename = f"rapport_installation_{client_name}_{timestamp}.pdf"
+        pdf_filename = f"rapport_resume_{client_name}_{timestamp}_temp.pdf"
 
-        # Utilisation du sous-dossier de l'installation si disponible
-        installation_id = full_data.get("installation_id", "")
+        installation_id = full_data.get("client_info", {}).get("installation_id", "")
         output_dir = self._get_installation_dir(installation_id)
         pdf_path = os.path.join(output_dir, pdf_filename)
 
-        # Création du document PDF
-        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
-        elements = []
+        try:
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            elements = []
+            styles = self._get_common_styles()
+            total_width = letter[0] - doc.leftMargin - doc.rightMargin
 
-        # Styles communs
-        styles = self._get_common_styles()
+            self._create_report_header(elements, "Résumé de l'installation ZymoSoft", total_width)
+            elements.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", styles['normal']))
+            elements.append(Spacer(1, 0.25 * inch))
 
-        # Largeur totale pour les tableaux (largeur page - marges)
-        total_width = letter[0] - doc.leftMargin - doc.rightMargin
-
-        # En-tête du rapport
-        self._create_report_header(elements, "Rapport final d'installation ZymoSoft", total_width)
-
-        # Date
-        elements.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", styles['normal']))
-        elements.append(Spacer(1, 0.25 * inch))
-
-        # Informations client
-        elements.append(Paragraph("Informations client", styles['heading1']))
-
-        client_info = full_data.get("client_info", {})
-        client_data = [
-            ["Paramètre", "Valeur"],
-            ["Nom du client", client_info.get("name", "")],
-            ["Responsable CS", client_info.get("cs_responsible", "")],
-            ["Responsable instrumentation", client_info.get("instrumentation_responsible", "")],
-            ["Date de début", full_data.get("timestamp_start", "")],
-            ["Identifiant d'installation", full_data.get("installation_id", "")]
-        ]
-
-        # Utiliser des largeurs de colonnes standard
-        col_widths = [total_width * 0.3, total_width * 0.7]
-        client_table = self._create_wrapped_table(client_data, col_widths)
-        elements.append(client_table)
-        elements.append(Spacer(1, 0.15 * inch))
-
-        # Résumé des vérifications
-        elements.append(Paragraph("Résumé des vérifications", styles['heading1']))
-
-        step2_checks = full_data.get("step2_checks", {})
-        check_results = step2_checks.get("check_results", {}) if "check_results" in step2_checks else step2_checks
-
-        if check_results.get("installation_valid", False):
-            elements.append(
-                Paragraph("Statut global: <font color='green'>✓ Installation valide</font>", styles['normal']))
-        else:
-            elements.append(
-                Paragraph("Statut global: <font color='red'>✗ Installation non valide</font>", styles['normal']))
-        elements.append(Spacer(1, 0.15 * inch))
-
-        # Détails des vérifications de configuration
-        elements.append(Paragraph("Détails des vérifications de configuration", styles['heading1']))
-
-        # Extraction et affichage des erreurs et avertissements
-        errors = []
-        warnings = []
-        for key, value in check_results.items():
-            if isinstance(value, dict) and "errors" in value:
-                errors.extend(value["errors"])
-            if isinstance(value, dict) and "warnings" in value:
-                warnings.extend(value["warnings"])
-
-        if errors:
-            elements.append(Paragraph("Erreurs détectées", styles['heading2']))
-            for error in errors:
-                elements.append(Paragraph(f"• <font color='red'>{error}</font>", styles['normal']))
-            elements.append(Spacer(1, 0.15 * inch))
-
-        if warnings:
-            elements.append(Paragraph("Avertissements", styles['heading2']))
-            for warning in warnings:
-                elements.append(Paragraph(f"• <font color='orange'>{warning}</font>", styles['normal']))
-            elements.append(Spacer(1, 0.15 * inch))
-
-        # Structure de l'installation
-        elements.append(Paragraph("Structure de l'installation", styles['heading2']))
-        structure_results = check_results.get("structure", {})
-        data = [["Élément", "Statut"]]
-        for key, value in structure_results.items():
-            if key != "installation_valid":
-                item_text = key.replace("_exists", "").replace("_", " ").capitalize()
-                status = "✓" if value else "✗"
-                status_color = "green" if value else "red"
-                data.append([item_text, f"<font color='{status_color}'>{status}</font>"])
-        if len(data) > 1:
-            table = self._create_wrapped_table(data, [0.7 * total_width, 0.3 * total_width])
-            elements.append(table)
-            elements.append(Spacer(1, 0.15 * inch))
-
-        # Config.ini
-        config_ini_results = check_results.get("config_ini", {})
-        if config_ini_results:
-            elements.append(Paragraph("Vérification de Config.ini", styles['heading2']))
-            status_text = "✓ Valide" if config_ini_results.get("config_valid", False) else "✗ Non valide"
-            status_color = "green" if config_ini_results.get("config_valid", False) else "red"
-            elements.append(Paragraph(f"Statut: <font color='{status_color}'>{status_text}</font>", styles['normal']))
-            elements.append(Spacer(1, 0.1 * inch))
-
-            # Affichage tableau paramètre/valeur/statut
-            values = config_ini_results.get("values", {})
-            checks = [
-                ("Application.ExpertMode", "ExpertMode"),
-                ("Application.ExportAcquisitionDetailResults", "ExportAcquisitionDetailResults"),
-                ("Hardware.Controller", "Controller"),
-                ("Interf.Worker", "Worker"),
-                ("Reflecto.Worker", "Worker")
+            # Informations client
+            client_info = full_data.get("client_info", {})
+            client_data = [
+                ["Paramètre", "Valeur"],
+                ["Nom du client", client_info.get("name", "")],
+                ["Responsable CS", client_info.get("cs_responsible", "")],
+                ["Responsable instrumentation", client_info.get("instrumentation_responsible", "")],
+                ["Date de début", full_data.get("timestamp_start", "")],
+                ["Identifiant d'installation", installation_id]
             ]
-            data = [["Paramètre", "Valeur", "Statut"]]
-            for param, key in checks:
-                value = values.get(param, "")
-                statut = "✓"
-                if "errors" in config_ini_results and any(
-                        param.split(".")[1] in e for e in config_ini_results["errors"]):
-                    statut = "✗"
-                elif value == "":
-                    statut = "✗"
-                status_color = "green" if statut == "✓" else "red"
-                data.append([param, str(value), f"<font color='{status_color}'>{statut}</font>"])
-            # Affichage des erreurs spécifiques (autres que les paramètres ci-dessus)
-            if "errors" in config_ini_results:
-                for err in config_ini_results["errors"]:
-                    if not any(k in err for _, k in checks):
-                        data.append(["Erreur", err, "<font color='red'>✗</font>"])
-            table = self._create_wrapped_table(data, [0.45 * total_width, 0.4 * total_width, 0.15 * total_width])
-            elements.append(table)
+            client_table = self._create_wrapped_table(client_data, [total_width * 0.3, total_width * 0.7])
+            elements.append(client_table)
             elements.append(Spacer(1, 0.15 * inch))
 
-        # PlateConfig.ini
-        plate_config_ini_results = check_results.get("plate_config_ini", {})
-        elements.append(Paragraph("Vérification de PlateConfig.ini", styles['heading2']))
-        status_text = "✓ Valide" if plate_config_ini_results.get("config_valid", False) else "✗ Non valide"
-        status_color = "green" if plate_config_ini_results.get("config_valid", False) else "red"
-        elements.append(Paragraph(f"Statut: <font color='{status_color}'>{status_text}</font>", styles['normal']))
-        elements.append(Spacer(1, 0.1 * inch))
+            # Résumé des vérifications
+            step2_checks = full_data.get("step2_checks", {})
+            if step2_checks.get("installation_valid", False):
+                elements.append(Paragraph("Statut des vérifications: <font color='green'>✓ Valide</font>", styles['normal']))
+            else:
+                elements.append(Paragraph("Statut des vérifications: <font color='red'>✗ Non valide</font>", styles['normal']))
+            elements.append(Spacer(1, 0.15 * inch))
 
-        data = [["Type/Paramètre", "Valeur", "Statut"]]
-        # Types de plaques
-        plate_types = plate_config_ini_results.get("plate_types", [])
-        for pt in plate_types:
-            data.append([
-                "Type de plaque",
-                f"{pt.get('name', '')} ({pt.get('config', '')})",
-                "<font color='green'>✓</font>"
-            ])
-        # Configs de plaques
-        configs = plate_config_ini_results.get("configs", {})
-        for config_name, config in configs.items():
-            # InterfParams
-            if config.get("interf_params"):
-                statut = "✓"
-                if "errors" in plate_config_ini_results and any(
-                        config["interf_params"] in e for e in plate_config_ini_results["errors"]):
-                    statut = "✗"
-                status_color = "green" if statut == "✓" else "red"
-                data.append([
-                    f"{config_name}.InterfParams",
-                    config["interf_params"],
-                    f"<font color='{status_color}'>{statut}</font>"
-                ])
-            # ReflectoParams
-            if config.get("reflecto_params"):
-                statut = "✓"
-                if "errors" in plate_config_ini_results and any(
-                        config["reflecto_params"] in e for e in plate_config_ini_results["errors"]):
-                    statut = "✗"
-                status_color = "green" if statut == "✓" else "red"
-                data.append([
-                    f"{config_name}.ReflectoParams",
-                    config["reflecto_params"],
-                    f"<font color='{status_color}'>{statut}</font>"
-                ])
-            # Fichiers de température
-            for temp in config.get("temperature_files", []):
-                statut = "✓"
-                if "errors" in plate_config_ini_results and any(
-                        temp['file'] in e for e in plate_config_ini_results["errors"]):
-                    statut = "✗"
-                status_color = "green" if statut == "✓" else "red"
-                data.append([
-                    f"{config_name}.{temp['key']}",
-                    temp['file'],
-                    f"<font color='{status_color}'>{statut}</font>"
-                ])
-        # Erreurs spécifiques
-        if "errors" in plate_config_ini_results:
-            for err in plate_config_ini_results["errors"]:
-                data.append(["Erreur", err, "<font color='red'>✗</font>"])
-        table = self._create_wrapped_table(data, [0.45 * total_width, 0.4 * total_width, 0.15 * total_width])
-        elements.append(table)
-        elements.append(Spacer(1, 0.15 * inch))
+            # Résumé des acquisitions
+            acquisitions = full_data.get("acquisitions", [])
+            valid_acquisitions = [acq for acq in acquisitions if acq.get("validated", False)]
+            elements.append(Paragraph(f"Acquisitions validées: {len(valid_acquisitions)}/{len(acquisitions)}", styles['normal']))
+            elements.append(Spacer(1, 0.15 * inch))
 
-        # ZymoCubeCtrl.ini
-        zymocube_ctrl_ini_results = check_results.get("zymocube_ctrl_ini", {})
-        elements.append(Paragraph("Vérification de ZymoCubeCtrl.ini", styles['heading2']))
-        status_text = "✓ Valide" if zymocube_ctrl_ini_results.get("config_valid", False) else "✗ Non valide"
-        status_color = "green" if zymocube_ctrl_ini_results.get("config_valid", False) else "red"
-        elements.append(Paragraph(f"Statut: <font color='{status_color}'>{status_text}</font>", styles['normal']))
-        elements.append(Spacer(1, 0.1 * inch))
+            # Actions de finalisation
+            actions = full_data.get("actions", {})
+            actions_status = full_data.get("actions_status", {})
+            actions_data = [["Action", "Statut"]]
+            if actions.get("client_mode"):
+                status = "✓ Effectué" if actions_status.get("client_mode") else "✗ Échoué"
+                actions_data.append(["Passage en mode client", status])
+            if actions.get("clean_pc"):
+                status = "✓ Effectué" if actions_status.get("clean_pc") else "✗ Échoué"
+                actions_data.append(["Nettoyage du PC", status])
+            actions_table = self._create_wrapped_table(actions_data, [total_width * 0.7, total_width * 0.3])
+            elements.append(actions_table)
+            elements.append(Spacer(1, 0.15 * inch))
 
-        data = [["Paramètre", "Valeur", "Statut"]]
-        values = zymocube_ctrl_ini_results.get("values", {})
-        for param, value in values.items():
-            statut = "✓"
-            if "errors" in zymocube_ctrl_ini_results and any(param in e for e in zymocube_ctrl_ini_results["errors"]):
-                statut = "✗"
-            status_color = "green" if statut == "✓" else "red"
-            data.append([param, str(value), f"<font color='{status_color}'>{statut}</font>"])
-        # Types de plaques
-        plate_types = zymocube_ctrl_ini_results.get("plate_types", [])
-        for pt in plate_types:
-            data.append(["PlateType", pt, "<font color='green'>✓</font>"])
-        # Erreurs spécifiques
-        if "errors" in zymocube_ctrl_ini_results:
-            for err in zymocube_ctrl_ini_results["errors"]:
-                data.append(["Erreur", err, "<font color='red'>✗</font>"])
-        table = self._create_wrapped_table(data, [0.45 * total_width, 0.4 * total_width, 0.15 * total_width])
-        elements.append(table)
-        elements.append(Spacer(1, 0.15 * inch))
+            # Commentaires
+            if full_data.get("general_comments"):
+                elements.append(Paragraph("Commentaire", styles['heading1']))
+                elements.append(Paragraph(full_data["general_comments"], styles['normal']))
 
-        # Pied de page
-        elements.append(Spacer(1, 0.5 * inch))
-        elements.append(Paragraph("Rapport généré automatiquement par ZymDeploy", styles['italic']))
+            doc.build(elements)
+            logger.info(f"Page de résumé générée: {pdf_path}")
+            return pdf_path
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération de la page de résumé: {e}", exc_info=True)
+            return None
 
-        # Génération du PDF
-        doc.build(elements)
+    def generate_final_report(self, full_data: Dict[str, Any]) -> str:
+        """
+        Génère un rapport PDF final complet en fusionnant le résumé, le rapport
+        de vérification et tous les rapports d'acquisition.
 
-        logger.info(f"Rapport final généré: {pdf_path}")
-        return pdf_path
+        Args:
+            full_data: Dictionnaire contenant toutes les données de l'installation.
+
+        Returns:
+            Chemin vers le fichier PDF final fusionné.
+        """
+        logger.info("Génération du rapport final fusionné (étape 4)")
+
+        # 1. Générer la page de résumé
+        summary_page_path = self.generate_summary_report_page(full_data)
+
+        # 2. Collecter les chemins de tous les rapports
+        report_paths = []
+        if summary_page_path:
+            report_paths.append(summary_page_path)
+
+        # Ajouter le rapport de l'étape 2 (vérification)
+        step2_report_path = full_data.get("step2_report_path")
+        if step2_report_path and os.path.exists(step2_report_path):
+            report_paths.append(step2_report_path)
+        else:
+            logger.warning("Rapport de vérification (étape 2) non trouvé.")
+
+        # Ajouter les rapports de l'étape 3 (acquisitions)
+        acquisitions = full_data.get("acquisitions", [])
+        for acq in acquisitions:
+            acq_report_path = acq.get("report_path")
+            if acq_report_path and os.path.exists(acq_report_path):
+                report_paths.append(acq_report_path)
+            else:
+                logger.warning(f"Rapport pour l'acquisition #{acq.get('id')} non trouvé.")
+
+        # 3. Définir le chemin du rapport final
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        client_name = full_data.get("client_info", {}).get("name", "client").replace(" ", "_")
+        pdf_filename = f"rapport_installation_{client_name}_{timestamp}.pdf"
+        installation_id = full_data.get("client_info", {}).get("installation_id", "")
+        output_dir = self._get_installation_dir(installation_id)
+        final_report_path = os.path.join(output_dir, pdf_filename)
+
+        # 4. Fusionner les PDF
+        try:
+            self._merge_pdfs(report_paths, final_report_path)
+        except Exception as e:
+            logger.error(f"Échec de la fusion des PDF: {e}", exc_info=True)
+            # En cas d'échec, retourner au moins la page de résumé si elle existe
+            if summary_page_path:
+                return summary_page_path
+            raise
+
+        # 5. Nettoyer le fichier de résumé temporaire
+        if summary_page_path and os.path.exists(summary_page_path):
+            try:
+                os.remove(summary_page_path)
+                logger.info(f"Fichier de résumé temporaire supprimé: {summary_page_path}")
+            except OSError as e:
+                logger.warning(f"Impossible de supprimer le fichier de résumé temporaire: {e}")
+
+        logger.info(f"Rapport final fusionné généré: {final_report_path}")
+        return final_report_path

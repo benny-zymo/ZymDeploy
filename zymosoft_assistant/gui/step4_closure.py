@@ -4,24 +4,25 @@
 """
 Module de l'étape 4 de l'assistant d'installation ZymoSoft : Clôture de l'installation
 """
-
+import configparser
 import os
 import logging
 import threading
 import time
 import shutil
-from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout, 
-                            QPushButton, QFrame, QFileDialog, QMessageBox,
-                            QProgressBar, QTabWidget, QWidget, QScrollArea,
-                            QTableWidget, QTableWidgetItem, QHeaderView,
-                            QCheckBox, QRadioButton, QGroupBox, QTextEdit,
-                            QTreeWidget, QTreeWidgetItem)
+from PyQt5.QtWidgets import (QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
+                             QPushButton, QFrame, QFileDialog, QMessageBox,
+                             QProgressBar, QTabWidget, QWidget, QScrollArea,
+                             QTableWidget, QTableWidgetItem, QHeaderView,
+                             QCheckBox, QRadioButton, QGroupBox, QTextEdit,
+                             QTreeWidget, QTreeWidgetItem, QDialog)
 from PyQt5.QtCore import Qt, pyqtSignal, QVariant
 from PyQt5.QtGui import QPixmap
 
 from zymosoft_assistant.utils.constants import COLOR_SCHEME, APP_CONFIG
 from zymosoft_assistant.core.report_generator import ReportGenerator
 from .step_frame import StepFrame
+from .clean_pc_dialog import CleanPCDialog
 
 logger = logging.getLogger(__name__)
 
@@ -136,15 +137,41 @@ class Step4Closure(StepFrame):
         clean_pc_desc.setContentsMargins(30, 0, 0, 5)
         actions_layout.addWidget(clean_pc_desc)
 
-        # Résumé de l'installation
+        # Résumé de l'installation (amélioré)
         summary_frame = QGroupBox("Résumé de l'installation")
         summary_layout = QVBoxLayout(summary_frame)
         right_panel_layout.addWidget(summary_frame)
 
-        self.summary_text = QTextEdit()
-        self.summary_text.setMinimumHeight(150)
-        self.summary_text.setReadOnly(True)
-        summary_layout.addWidget(self.summary_text)
+        # Utilisation de labels pour un affichage plus propre
+        self.summary_client_label = QLabel("Client: Non spécifié")
+        summary_layout.addWidget(self.summary_client_label)
+
+        self.summary_cs_label = QLabel("Responsable CS: Non spécifié")
+        summary_layout.addWidget(self.summary_cs_label)
+
+        self.summary_instrumentation_label = QLabel("Responsable instrumentation: Non spécifié")
+        summary_layout.addWidget(self.summary_instrumentation_label)
+
+        summary_layout.addSpacing(10)
+
+        self.summary_checks_label = QLabel("Vérifications: Non effectuées")
+        summary_layout.addWidget(self.summary_checks_label)
+
+        self.summary_acquisitions_label = QLabel("Acquisitions validées: 0/0")
+        summary_layout.addWidget(self.summary_acquisitions_label)
+
+        summary_layout.addSpacing(10)
+
+        self.summary_actions_label = QLabel("Actions à effectuer:")
+        summary_layout.addWidget(self.summary_actions_label)
+
+        self.summary_client_mode_label = QLabel("- Passer en mode client")
+        self.summary_client_mode_label.setStyleSheet("padding-left: 15px;")
+        summary_layout.addWidget(self.summary_client_mode_label)
+
+        self.summary_clean_pc_label = QLabel("- Nettoyer le PC")
+        self.summary_clean_pc_label.setStyleSheet("padding-left: 15px;")
+        summary_layout.addWidget(self.summary_clean_pc_label)
 
         # Barre de progression
         self.progress_frame = QWidget()
@@ -161,65 +188,41 @@ class Step4Closure(StepFrame):
         self.progress_label.setAlignment(Qt.AlignLeft)
         progress_layout.addWidget(self.progress_label)
 
-        # Boutons d'action
-        buttons_frame = QWidget()
-        buttons_layout = QHBoxLayout(buttons_frame)
-        buttons_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(buttons_frame)
-
-        self.prev_step_button = QPushButton("Étape précédente")
-        self.prev_step_button.clicked.connect(self.main_window.previous_step)
-        buttons_layout.addWidget(self.prev_step_button, 0, Qt.AlignLeft)
-
-        self.finalize_button = QPushButton("Finaliser l'installation")
-        self.finalize_button.clicked.connect(self._finalize_installation)
-        self.finalize_button.setStyleSheet(f"background-color: {COLOR_SCHEME['primary']}; color: white;")
-        buttons_layout.addWidget(self.finalize_button, 0, Qt.AlignRight)
-
-        # Bouton pour générer le rapport final
-        self.report_button = QPushButton("Générer rapport final")
-        self.report_button.clicked.connect(self._generate_final_report)
-        self.report_button.setEnabled(False)
-        buttons_layout.addWidget(self.report_button, 0, Qt.AlignRight)
+        # Les boutons de navigation sont maintenant gérés par la fenêtre principale
+        # pour une expérience utilisateur cohérente.
+        # Le bouton "Terminer" de la fenêtre principale déclenchera la finalisation.
 
     def _update_summary(self):
         """
-        Met à jour le résumé de l'installation
+        Met à jour le résumé de l'installation avec les nouveaux labels
         """
         try:
-            # Vérifier si summary_text existe
-            if self.summary_text is None:
-                logger.error("Erreur dans _update_summary: self.summary_text est None")
-                return
-
             # Récupérer les informations client
             client_info = self.main_window.session_data.get("client_info", {})
-            client_name = client_info.get("name", "Non spécifié")
-            cs_responsible = client_info.get("cs_responsible", "Non spécifié")
-            instrumentation_responsible = client_info.get("instrumentation_responsible", "Non spécifié")
+            self.summary_client_label.setText(f"Client: {client_info.get('name', 'Non spécifié')}")
+            self.summary_cs_label.setText(f"Responsable CS: {client_info.get('cs_responsible', 'Non spécifié')}")
+            self.summary_instrumentation_label.setText(f"Responsable instrumentation: {client_info.get('instrumentation_responsible', 'Non spécifié')}")
 
             # Récupérer les informations sur les vérifications
             checks = self.main_window.session_data.get("step2_checks", {})
-            checks_status = "✓ Réussies" if checks.get("installation_valid", False) else "✗ Échouées"
+            if checks:
+                checks_status = "✓ Réussies" if checks.get("installation_valid", False) else "✗ Échouées"
+                self.summary_checks_label.setText(f"Vérifications: {checks_status}")
+            else:
+                self.summary_checks_label.setText("Vérifications: Non effectuées")
 
             # Récupérer les informations sur les acquisitions
             acquisitions = self.main_window.session_data.get("acquisitions", [])
             valid_acquisitions = [acq for acq in acquisitions if acq.get("validated", False)]
+            self.summary_acquisitions_label.setText(f"Acquisitions validées: {len(valid_acquisitions)}/{len(acquisitions)}")
 
-            # Construire le résumé
-            summary = (
-                f"Client: {client_name}\n"
-                f"Responsable CS: {cs_responsible}\n"
-                f"Responsable instrumentation: {instrumentation_responsible}\n\n"
-                f"Vérifications: {checks_status}\n"
-                f"Acquisitions validées: {len(valid_acquisitions)}/{len(acquisitions)}\n\n"
-                f"Actions à effectuer:\n"
-                f"- {'✓' if self.client_mode_var else '✗'} Passer en mode client\n"
-                f"- {'✓' if self.clean_pc_var else '✗'} Nettoyer le PC\n"
-            )
+            # Mettre à jour les actions à effectuer
+            client_mode_icon = '✓' if self.client_mode_var else '✗'
+            self.summary_client_mode_label.setText(f"- {client_mode_icon} Passer en mode client")
 
-            # Mettre à jour le texte
-            self.summary_text.setPlainText(summary)
+            clean_pc_icon = '✓' if self.clean_pc_var else '✗'
+            self.summary_clean_pc_label.setText(f"- {clean_pc_icon} Nettoyer le PC")
+
         except Exception as e:
             logger.error(f"Erreur dans _update_summary: {str(e)}", exc_info=True)
 
@@ -278,47 +281,13 @@ class Step4Closure(StepFrame):
         except Exception as e:
             logger.error(f"Erreur dans _update_history: {str(e)}", exc_info=True)
 
-    def _finalize_installation(self):
-        """
-        Finalise l'installation en appliquant les actions sélectionnées
-        """
-        # Récupérer les commentaires
-        self.general_comments = self.comments_text.toPlainText().strip()
-
-        # Vérifier que les étapes précédentes sont valides
-        if not self._validate_previous_steps():
-            return
-
-        # Confirmer les actions
-        reply = QMessageBox.question(
-            self.widget,
-            "Confirmation",
-            "Êtes-vous sûr de vouloir finaliser l'installation ?\n\n"
-            "Les actions sélectionnées seront appliquées et un rapport final sera généré.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-
-        if reply != QMessageBox.Yes:
-            return
-
-        # Désactiver les boutons pendant le traitement
-        self.finalize_button.setEnabled(False)
-        self.prev_step_button.setEnabled(False)
-
-        # Réinitialiser la barre de progression
-        self.progress_bar.setValue(0)
-        self.progress_label.setText("Préparation...")
-
-        # Sauvegarder les données
-        self.save_data()
-
-        # Lancer les actions dans un thread séparé
-        threading.Thread(target=self._execute_actions, daemon=True).start()
+    # La méthode _finalize_installation a été supprimée car la logique de finalisation
+    # est maintenant initiée par la MainWindow pour une meilleure centralisation du contrôle.
 
     def _execute_actions(self):
         """
-        Exécute les actions de finalisation dans un thread séparé
+        Exécute les actions de finalisation. Le nettoyage du PC est fait dans le thread principal
+        à cause de la boîte de dialogue, le reste est fait ici.
         """
         try:
             # Passer en mode client
@@ -326,38 +295,63 @@ class Step4Closure(StepFrame):
                 self._update_progress(10, "Passage en mode client...")
                 try:
                     self._set_client_mode()
+                    self.actions_status["client_mode"] = True
                 except Exception as e:
                     logger.error(f"Erreur lors du passage en mode client: {str(e)}", exc_info=True)
-                    # Continuer malgré l'erreur
-                time.sleep(0.5)  # Simuler un traitement
+                    self.actions_status["client_mode"] = False
+                time.sleep(0.5)
 
-            # Nettoyer le PC
-            if self.clean_pc_var:
-                self._update_progress(30, "Nettoyage du PC...")
-                try:
-                    self._clean_pc()
-                except Exception as e:
-                    logger.error(f"Erreur lors du nettoyage du PC: {str(e)}", exc_info=True)
-                    # Continuer malgré l'erreur
-                time.sleep(0.5)  # Simuler un traitement
+            # Le nettoyage du PC est géré séparément
+            self._update_progress(30, "En attente de l'action de nettoyage...")
 
+            # Utiliser QTimer pour appeler la méthode de nettoyage dans le thread principal
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(0, self._handle_pc_cleanup)
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la finalisation: {str(e)}", exc_info=True)
+            error_message = str(e)
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(0, lambda: self._handle_finalization_error(error_message))
+
+    def _handle_pc_cleanup(self):
+        """
+        Gère le nettoyage du PC, y compris l'affichage de la boîte de dialogue.
+        Cette méthode est exécutée dans le thread principal.
+        """
+        if self.clean_pc_var:
+            cleanup_success = self._clean_pc()
+            self.actions_status["clean_pc"] = cleanup_success
+            if not cleanup_success:
+                # L'utilisateur a annulé ou une erreur est survenue
+                self._handle_finalization_error("L'opération de nettoyage a été annulée ou a échoué.")
+                return
+        else:
+            self.actions_status["clean_pc"] = True # L'action n'était pas requise, donc on la considère comme réussie
+
+        # Continuer avec le reste des actions dans un thread
+        threading.Thread(target=self._continue_actions_after_cleanup, daemon=True).start()
+
+    def _continue_actions_after_cleanup(self):
+        """
+        Continue les actions de finalisation après le nettoyage du PC.
+        """
+        try:
             # Générer le rapport final
             self._update_progress(60, "Génération du rapport final...")
             try:
                 self._do_generate_final_report()
             except Exception as e:
                 logger.error(f"Erreur lors de la génération du rapport final: {str(e)}", exc_info=True)
-                # Continuer malgré l'erreur
-            time.sleep(0.5)  # Simuler un traitement
+            time.sleep(0.5)
 
             # Finalisation
             self._update_progress(100, "Installation finalisée avec succès.")
 
-            # Mettre à jour l'interface dans le thread principal
             from PyQt5.QtCore import QTimer
             QTimer.singleShot(0, self._finalization_completed)
         except Exception as e:
-            logger.error(f"Erreur lors de la finalisation: {str(e)}", exc_info=True)
+            logger.error(f"Erreur après le nettoyage: {str(e)}", exc_info=True)
             error_message = str(e)
             from PyQt5.QtCore import QTimer
             QTimer.singleShot(0, lambda: self._handle_finalization_error(error_message))
@@ -395,176 +389,105 @@ class Step4Closure(StepFrame):
         QMessageBox.critical(self.widget, "Erreur", f"Une erreur est survenue lors de la finalisation:\n{error_message}")
         self.progress_label.setText(f"Erreur: {error_message}")
 
-        # Réactiver les boutons
-        self.finalize_button.setEnabled(True)
-        self.prev_step_button.setEnabled(True)
+        # Les boutons sont gérés par la fenêtre principale, qui sera informée de l'erreur.
+        # On peut envisager un signal pour communiquer l'état.
+        self.main_window.on_finalization_error()
+
 
     def _finalization_completed(self):
         """
         Appelé lorsque la finalisation est terminée avec succès
         """
         # Afficher un message de succès
-        QMessageBox.information(self.widget, "Succès", 
+        QMessageBox.information(self.widget, "Succès",
                                "L'installation a été finalisée avec succès.\n\n"
-                               "Un rapport final a été généré.")
+                               "Le rapport final fusionné a été généré.")
 
-        # Activer le bouton de rapport
-        self.report_button.setEnabled(True)
-
-        # Réactiver le bouton précédent
-        self.prev_step_button.setEnabled(True)
+        # Informer la fenêtre principale que la finalisation est terminée
+        self.main_window.on_finalization_success()
 
     def _set_client_mode(self):
         """
-        Passe ZymoSoft en mode client (ExpertMode=false)
+        Passe ZymoSoft en mode client (ExpertMode=false) en utilisant configparser
         """
         try:
-            # Récupérer le chemin du fichier Config.ini
-            zymosoft_path = self.main_window.session_data.get("zymosoft_path", "")
-
-            if not zymosoft_path:
-                logger.warning("Chemin ZymoSoft non défini dans les données de session")
-                # Utiliser le chemin par défaut
+            config_path = self.main_window.session_data.get("step2_checks", {}).get("zymosoft_path", "")
+            if not config_path:
                 from zymosoft_assistant.utils.constants import ZYMOSOFT_BASE_PATH
-                zymosoft_path = ZYMOSOFT_BASE_PATH
+                config_path = ZYMOSOFT_BASE_PATH
 
-            config_path = os.path.join(zymosoft_path, "etc", "Config.ini")
+            config_path = os.path.join(config_path, "etc", "Config.ini")
 
-            # Vérifier si le dossier etc existe
-            etc_dir = os.path.join(zymosoft_path, "etc")
-            if not os.path.exists(etc_dir):
-                try:
-                    os.makedirs(etc_dir, exist_ok=True)
-                    logger.info(f"Dossier etc créé: {etc_dir}")
-                except Exception as e:
-                    logger.error(f"Impossible de créer le dossier etc: {str(e)}")
-                    # Continuer malgré l'erreur
+            config = configparser.ConfigParser()
 
-            # Vérifier si le fichier Config.ini existe
-            if not os.path.exists(config_path):
-                logger.warning(f"Fichier Config.ini introuvable: {config_path}")
-                # Créer un fichier Config.ini minimal
-                try:
-                    with open(config_path, 'w') as f:
-                        f.write("[Application]\nExpertMode=false\n")
-                    logger.info(f"Fichier Config.ini créé: {config_path}")
-                    self.actions_status["client_mode"] = True
-                    return
-                except Exception as e:
-                    logger.error(f"Impossible de créer le fichier Config.ini: {str(e)}")
-                    # Ne pas lever d'exception, juste marquer l'action comme échouée
-                    self.actions_status["client_mode"] = False
-                    return
+            # Read the configuration file, allowing it to be missing
+            config.read(config_path)
 
-            # Lire le fichier
-            try:
-                with open(config_path, 'r') as f:
-                    lines = f.readlines()
-            except Exception as e:
-                logger.error(f"Erreur lors de la lecture du fichier Config.ini: {str(e)}")
-                # Créer un nouveau fichier
-                try:
-                    with open(config_path, 'w') as f:
-                        f.write("[Application]\nExpertMode=false\n")
-                    logger.info(f"Fichier Config.ini recréé: {config_path}")
-                    self.actions_status["client_mode"] = True
-                    return
-                except Exception as e2:
-                    logger.error(f"Impossible de créer le fichier Config.ini: {str(e2)}")
-                    self.actions_status["client_mode"] = False
-                    return
+            # Ensure the [Application] section exists
+            if 'Application' not in config:
+                config['Application'] = {}
 
-            # Modifier la ligne ExpertMode
-            modified = False
-            for i, line in enumerate(lines):
-                if line.strip().startswith("ExpertMode="):
-                    lines[i] = "ExpertMode=false\n"
-                    modified = True
-                    break
+            # Set the expertmode to false
+            config['Application']['expertmode'] = 'false'
 
-            if not modified:
-                # Si la ligne n'existe pas, l'ajouter dans la section [Application]
-                application_section_found = False
-                for i, line in enumerate(lines):
-                    if line.strip() == "[Application]":
-                        application_section_found = True
-                        # Trouver la fin de la section
-                        for j in range(i+1, len(lines)):
-                            if lines[j].strip().startswith("["):
-                                # Insérer avant la prochaine section
-                                lines.insert(j, "ExpertMode=false\n")
-                                modified = True
-                                break
-                        if not modified:
-                            # Si pas d'autre section, ajouter à la fin
-                            lines.append("ExpertMode=false\n")
-                            modified = True
-                        break
+            # Write the changes back to the file
+            with open(config_path, 'w') as f:
+                config.write(f)
 
-                if not application_section_found:
-                    # Si la section [Application] n'existe pas, la créer
-                    lines.append("\n[Application]\n")
-                    lines.append("ExpertMode=false\n")
-                    modified = True
-
-            # Écrire le fichier modifié
-            try:
-                with open(config_path, 'w') as f:
-                    f.writelines(lines)
-                logger.info(f"Mode client activé dans {config_path}")
-                self.actions_status["client_mode"] = True
-            except Exception as e:
-                logger.error(f"Erreur lors de l'écriture du fichier Config.ini: {str(e)}")
-                self.actions_status["client_mode"] = False
+            logger.info(f"Mode client activé dans {config_path}")
+            self.actions_status["client_mode"] = True
 
         except Exception as e:
             logger.error(f"Erreur lors du passage en mode client: {str(e)}", exc_info=True)
             self.actions_status["client_mode"] = False
-            # Ne pas lever d'exception pour éviter d'interrompre le processus de finalisation
 
     def _clean_pc(self):
         """
-        Nettoie le PC en supprimant les données d'acquisitions de test et en vidant le dossier Diag/Temp
+        Ouvre une boîte de dialogue pour permettre à l'utilisateur de nettoyer le PC de manière sélective.
+        Retourne True si l'opération est réussie ou si l'utilisateur annule, False en cas d'échec.
         """
         try:
-            # Récupérer le chemin de ZymoSoft
-            zymosoft_path = self.main_window.session_data.get("zymosoft_path", "")
+            items_to_clean = []
 
-            # Vider le dossier Diag/Temp
-            diag_temp_path = os.path.join("C:", "Users", "Public", "Zymoptiq", "Diag", "Temp")
-
+            # 1. Trouver le dossier Diag/Temp  en utilisant le chemin du zymosoft , le fichier diag se trouve au même niveau que le dossier du zymosoft
+            zymosoft_path = self.main_window.session_data.get("step2_checks", {}).get("zymosoft_path", "")
+            # diag n'est pas un sous dossier de zymosoft, il est au même niveau
+            # sachant que zymosoft_path est le chemin vers le dossier zymosoft
+            diag_temp_path = os.path.join(os.path.dirname(zymosoft_path), "Diag", "Temp")
             if os.path.exists(diag_temp_path):
-                # Supprimer tous les fichiers du dossier
-                for filename in os.listdir(diag_temp_path):
-                    file_path = os.path.join(diag_temp_path, filename)
-                    try:
-                        if os.path.isfile(file_path):
-                            os.unlink(file_path)
-                        elif os.path.isdir(file_path):
-                            shutil.rmtree(file_path)
-                    except Exception as e:
-                        logger.warning(f"Erreur lors de la suppression de {file_path}: {str(e)}")
+                logger.info(f"Dossier Diag/Temp trouvé: {diag_temp_path}")
+                items_to_clean.append(diag_temp_path)
 
-                logger.info(f"Dossier Diag/Temp vidé: {diag_temp_path}")
-            else:
-                logger.warning(f"Dossier Diag/Temp introuvable: {diag_temp_path}")
-
-            # Supprimer les acquisitions de test
-            # Récupérer les dossiers d'acquisition
+            # 2. Trouver les dossiers d'acquisition de test
             acquisitions = self.main_window.session_data.get("acquisitions", [])
+            logger.info(f"Nombre d'acquisitions trouvées: {len(acquisitions)}")
+            logger.info(f'Acquisitions: {acquisitions}')
             for acquisition in acquisitions:
                 results_folder = acquisition.get("results_folder", "")
-                if results_folder and os.path.exists(results_folder) and "test" in results_folder.lower():
-                    try:
-                        shutil.rmtree(results_folder)
-                        logger.info(f"Dossier d'acquisition supprimé: {results_folder}")
-                    except Exception as e:
-                        logger.warning(f"Erreur lors de la suppression de {results_folder}: {str(e)}")
+                logger.info(f'Vérification du dossier d\'acquisition: {results_folder}')
+                # On ne cible que les acquisitions invalidées ou celles contenant "test"
+                if results_folder and os.path.exists(results_folder):
+                        items_to_clean.append(results_folder)
 
-            self.actions_status["clean_pc"] = True
+            if not items_to_clean:
+                QMessageBox.information(self.widget, "Nettoyage", "Aucun élément à nettoyer n'a été trouvé.")
+                return True
+
+            # Afficher la boîte de dialogue
+            dialog = CleanPCDialog(items_to_clean, self.widget)
+            result = dialog.exec_()
+
+            if result == QDialog.Accepted:
+                logger.info("Nettoyage du PC effectué avec succès via la boîte de dialogue.")
+                return True
+            else:
+                logger.warning("L'utilisateur a annulé le nettoyage du PC.")
+                return False # L'utilisateur a annulé
+
         except Exception as e:
-            logger.error(f"Erreur lors du nettoyage du PC: {str(e)}", exc_info=True)
-            raise
+            logger.error(f"Erreur lors de la préparation du nettoyage du PC: {str(e)}", exc_info=True)
+            QMessageBox.critical(self, "Erreur", f"Une erreur est survenue lors de la préparation du nettoyage:\n{e}")
+            return False
 
     def _generate_final_report(self):
         """
@@ -594,10 +517,9 @@ class Step4Closure(StepFrame):
         report_generator = ReportGenerator()
 
         # Préparation des données pour le rapport
-        report_data = {
-            "client_info": self.main_window.session_data.get("client_info", {}),
-            "step2_checks": self.main_window.session_data.get("step2_checks", {}),
-            "acquisitions": self.main_window.session_data.get("acquisitions", []),
+        # La méthode generate_final_report attend maintenant le dictionnaire de session complet
+        full_data = self.main_window.session_data.copy()
+        full_data.update({
             "general_comments": self.general_comments,
             "actions": {
                 "client_mode": self.client_mode_var,
@@ -605,10 +527,10 @@ class Step4Closure(StepFrame):
             },
             "actions_status": self.actions_status,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-        }
+        })
 
-        # Génération du rapport
-        report_path = report_generator.generate_final_report(report_data)
+        # Génération du rapport fusionné
+        report_path = report_generator.generate_final_report(full_data)
 
         # Stocker le chemin du rapport dans les données de session
         self.main_window.session_data["final_report_path"] = report_path
@@ -667,8 +589,8 @@ class Step4Closure(StepFrame):
 
     def execute_cleanup_actions(self):
         """
-        Exécute les actions de nettoyage lors de la finalisation
-        Cette méthode est appelée par la fenêtre principale lors de la finalisation
+        Exécute les actions de nettoyage lors de la finalisation dans un thread séparé.
+        Cette méthode est appelée par la fenêtre principale lors de la finalisation.
         """
         # Récupérer les commentaires
         self.general_comments = self.comments_text.toPlainText().strip()
@@ -676,8 +598,13 @@ class Step4Closure(StepFrame):
         # Sauvegarder les données
         self.save_data()
 
-        # Exécuter les actions directement (sans thread)
-        self._execute_actions()
+        # Réinitialiser la barre de progression
+        self.progress_bar.setValue(0)
+        self.progress_label.setText("Préparation de la finalisation...")
+
+        # Lancer les actions dans un thread séparé pour ne pas bloquer l'UI
+        action_thread = threading.Thread(target=self._execute_actions, daemon=True)
+        action_thread.start()
 
         return True
 

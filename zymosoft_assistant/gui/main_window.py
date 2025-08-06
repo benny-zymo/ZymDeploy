@@ -651,35 +651,58 @@ border: none;
 
     def finalize(self):
         """
-        Finalise l'assistant et génère le rapport final
+        Finalise l'assistant en exécutant les actions de l'étape 4.
         """
         # Confirmation
         reply = QMessageBox.question(self, "Finalisation",
-                                     "Êtes-vous sûr de vouloir finaliser l'installation ?",
+                                     "Êtes-vous sûr de vouloir finaliser l'installation ?\n\n"
+                                     "Les actions de nettoyage seront exécutées et le rapport final sera généré.",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply != QMessageBox.Yes:
             return
 
+        # Désactiver les boutons de navigation pour éviter les manipulations
+        self.prev_button.setEnabled(False)
+        self.next_button.setEnabled(False)
+        self.status_label.setText("Finalisation en cours, veuillez patienter...")
+
         try:
-            # Exécution des actions de finalisation
+            # L'étape 4 gère sa propre logique, y compris le thread et la barre de progression
             self.steps[3].execute_cleanup_actions()
-
-            # Génération du rapport final
-            report_path = self.steps[3].generate_final_report()
-
-            # Affichage du message de succès
-            QMessageBox.information(self, "Finalisation",
-                                    f"Installation finalisée avec succès !\n\n"
-                                    f"Le rapport final a été généré :\n{report_path}")
-
-            # Sauvegarde de la session
-            self.save_session()
-
-            # Fermeture de l'application
-            self.quit_app()
         except Exception as e:
-            logger.error(f"Erreur lors de la finalisation: {str(e)}", exc_info=True)
-            QMessageBox.critical(self, "Erreur", f"Une erreur est survenue lors de la finalisation:\n{str(e)}")
+            logger.error(f"Erreur lors du lancement de la finalisation: {str(e)}", exc_info=True)
+            QMessageBox.critical(self, "Erreur de finalisation",
+                                 f"Une erreur critique est survenue au lancement de la finalisation:\n{str(e)}")
+            self.on_finalization_error()
+
+    def on_finalization_success(self):
+        """
+        Callback appelé par l'étape 4 lorsque la finalisation est réussie.
+        """
+        self.status_label.setText("Installation finalisée avec succès.")
+        # Le message de succès est déjà affiché par Step4
+        # On pourrait demander à sauvegarder et quitter ici
+        reply = QMessageBox.question(self, "Session terminée",
+                                     "L'installation est terminée. Voulez-vous sauvegarder la session et quitter l'application ?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.save_session()
+            self.quit_app()
+        else:
+            # Réactiver le bouton précédent pour permettre la consultation
+            self.prev_button.setEnabled(True)
+            # Le bouton "Terminer" reste désactivé car le processus est fini
+            self.next_button.setEnabled(False)
+
+
+    def on_finalization_error(self):
+        """
+        Callback appelé par l'étape 4 en cas d'erreur de finalisation.
+        """
+        self.status_label.setText("Une erreur est survenue lors de la finalisation.")
+        # Réactiver les boutons pour permettre à l'utilisateur de corriger le problème
+        self.prev_button.setEnabled(True)
+        self.next_button.setEnabled(True) # Permet de retenter
 
     def new_session(self):
         """

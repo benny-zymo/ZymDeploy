@@ -138,9 +138,4 @@ if __name__ == "__main__":
     sys.exit(main())
 
 
-'''
-TODO : 
 
-check step 3 analyser les resutlats problème 
-
-'''
