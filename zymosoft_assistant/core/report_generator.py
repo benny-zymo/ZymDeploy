@@ -370,7 +370,6 @@ class ReportGenerator:
         structure_checks = checks.get("structure", {})
         zymosoft_version = structure_checks.get('zymosoft_version', 'N/A')
         elements.append(Paragraph(f"Version ZymoSoft : <b>{zymosoft_version}</b>", styles['normal']))
-
         elements.append(Spacer(1, 0.2 * cm))
 
         # Section 2 : Erreurs et avertissements
@@ -432,14 +431,21 @@ class ReportGenerator:
         elements.append(Paragraph(f"Statut : <font color='{status_color}'>{status_text}</font>", styles['normal']))
         elements.append(Spacer(1, 0.1 * cm))
 
-        # Tableau des paramètres
+        # Vérifier la présence de ConfigLayer dans PlateConfig.ini
+        plate_config_ini_results = checks.get("plate_config_ini", {})
+        has_config_layer = any(
+            config.get("has_config_layer", False) for config in plate_config_ini_results.get("configs", {}).values())
+
+        # Liste des paramètres à vérifier, conditionnée par la présence de ConfigLayer
         checks_list = [
             ("Application.ExpertMode", "ExpertMode"),
             ("Application.ExportAcquisitionDetailResults", "ExportAcquisitionDetailResults"),
             ("Hardware.Controller", "Controller"),
             ("Interf.Worker", "Worker"),
-            ("Reflecto.Worker", "Worker")
         ]
+        if has_config_layer:
+            checks_list.append(("Reflecto.Worker", "Worker"))
+
         values = config_ini_results.get("values", {})
         data = [["Paramètre", "Valeur", "Statut"]]
 
@@ -455,7 +461,7 @@ class ReportGenerator:
                 for err in config_ini_results.get("errors", []):
                     if param.split(".")[1] in err:
                         displayed_errors.add(err)
-            elif value == "":
+            elif value == "" and param != "Reflecto.Worker":  # Ne pas marquer Reflecto.Worker comme erreur s'il est absent et non requis
                 statut = "✗"
             status_color = "green" if statut == "✓" else "red"
             data.append([param, str(value), f"<font color='{status_color}'>{statut}</font>"])
@@ -1299,7 +1305,7 @@ class ReportGenerator:
 
             # Commentaires
             if full_data.get("general_comments"):
-                elements.append(Paragraph("Commentaires généraux", styles['heading1']))
+                elements.append(Paragraph("Commentaire", styles['heading1']))
                 elements.append(Paragraph(full_data["general_comments"], styles['normal']))
 
             doc.build(elements)

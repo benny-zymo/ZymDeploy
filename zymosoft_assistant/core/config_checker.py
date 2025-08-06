@@ -10,7 +10,7 @@ import logging
 import configparser
 from typing import Dict, Any, List, Tuple
 from pathlib import Path
-from zymosoft_assistant.utils.helpers import  get_exe_version
+from zymosoft_assistant.utils.helpers import get_exe_version
 
 logger = logging.getLogger(__name__)
 
@@ -60,15 +60,25 @@ class ConfigChecker:
         logger.info(f"Installation ZymoSoft trouvée: {self.base_path}")
 
     def _extract_version_from_path(self) -> str:
-        """Extrait la version de ZymoSoft à partir du chemin d'installation"""
+        """
+        Extracts the version information from the base path if available.
+
+        This method checks the `base_path` attribute and retrieves the version
+        information encoded as a suffix in the form '_V' within the path name.
+        If the `base_path` attribute is empty or does not contain the version
+        identifier, it returns a placeholder value "inconnue".
+
+        :return: The extracted version as a string if found; otherwise, "inconnue".
+        :rtype: str
+        """
         if not self.base_path:
             return "inconnue"
 
         path = Path(self.base_path)
-        if not "ZymoSoft_V" in path.name:
+        if not "_V" in path.name:
             return "inconnue"
 
-        return path.name.replace("ZymoSoft_V", "")
+        return path.name.split("_V")[-1]
 
     def check_installation_structure(self) -> Dict[str, bool]:
         """
@@ -138,7 +148,6 @@ class ConfigChecker:
                     logger.warning(f"Version de ZymoSoft.exe non correspondante: {exe_version} (attendu: {self.version})")
                     results["version_match"] = False
 
-
         # Mise à jour du statut global
         results["installation_valid"] = (
             results["bin_exists"] and
@@ -176,7 +185,7 @@ class ConfigChecker:
         }
 
         # Vérification des sections obligatoires
-        required_sections = ["Application", "Hardware", "Interf", "Reflecto"]
+        required_sections = ["Application", "Hardware", "Interf"]
         for section in required_sections:
             if section not in config:
                 results["errors"].append(f"Section [{section}] manquante")
@@ -200,7 +209,6 @@ class ConfigChecker:
                         f"'{value}' (attendu: '{expected_value}')"
                     )
                     results["config_valid"] = False
-
             else:
                 if section in config:
                     results["errors"].append(f"Propriété '{key}' manquante dans [{section}]")
@@ -213,7 +221,20 @@ class ConfigChecker:
         ]
 
         for section, key in worker_checks:
-            if section in config and key in config[section]:
+            if section == "Reflecto" and section not in config:
+                # Vérifier si PlateConfig.ini contient ConfigLayer
+                plate_config_path = os.path.join(self.base_path, "etc", "PlateConfig.ini")
+                if os.path.exists(plate_config_path):
+                    plate_config = configparser.ConfigParser()
+                    plate_config.read(plate_config_path, encoding='utf-8-sig')
+                    for plate_section in plate_config.sections():
+                        if plate_section.startswith("PlateConfig:") and "ConfigLayer" in plate_config[plate_section]:
+                            logger.debug(f"Détection de ConfigLayer dans {plate_section}, vérification de [Reflecto] et Worker")
+                            results["errors"].append(
+                                f"Section [Reflecto] et propriété 'Worker' manquantes dans Config.ini, mais ConfigLayer trouvé dans [{plate_section}] de PlateConfig.ini"
+                            )
+                            results["config_valid"] = False
+            elif section in config and key in config[section]:
                 worker_path = config[section][key]
                 results["values"][f"{section}.{key}"] = worker_path
 
@@ -229,10 +250,12 @@ class ConfigChecker:
                             f"Worker non trouvé: {worker_path}"
                         )
                         results["config_valid"] = False
-
-
-            else:
-                if section in config:
+            elif section in config:
+                if section == "Reflecto":
+                    logger.debug(f"Section [Reflecto] présente mais propriété 'Worker' manquante")
+                    results["errors"].append(f"Propriété '{key}' manquante dans [{section}]")
+                    results["config_valid"] = False
+                else:
                     results["errors"].append(f"Propriété '{key}' manquante dans [{section}]")
                     results["config_valid"] = False
 
@@ -247,7 +270,7 @@ class ConfigChecker:
         temperature-related files.
 
         The validation evaluates the following:
-        - Presence of the "PlateType" section in the configuration file.
+        - Presence of the "PlateType" section is required.
         - Existence of associated plate configurations for each plate type.
         - Validity of specified "InterfParams" and "ReflectoParams" ensuring no simultaneous usage and
           checks for file existence.
@@ -276,7 +299,6 @@ class ConfigChecker:
             return {"config_valid": False, "errors": ["Fichier PlateConfig.ini non trouvé"]}
 
         try:
-
             config = configparser.ConfigParser()
             config.read(config_path, encoding='utf-8-sig')
         except configparser.Error as e:
@@ -291,7 +313,7 @@ class ConfigChecker:
             "configs": {}
         }
 
-        # Vérification de la section PlateType
+        # Vérification obligatoire de la section PlateType
         if "PlateType" not in config:
             results["errors"].append("Section [PlateType] manquante")
             results["config_valid"] = False
@@ -317,11 +339,9 @@ class ConfigChecker:
                 "name": plate_info["config"],
                 "interf_params": None,
                 "reflecto_params": None,
-                "temperature_files": []
+                "temperature_files": [],
+                "has_config_layer": False
             }
-
-
-
 
             # Vérification des paramètres Interf et Reflecto - une config ne peut pas avoir les deux
             has_interf = False
@@ -376,9 +396,14 @@ class ConfigChecker:
                         results["errors"].append(f"Fichier de température non trouvé: {temp_file}")
                         results["config_valid"] = False
 
+            # Vérification de ConfigLayer
+            if "ConfigLayer" in config[config_section]:
+                plate_config["has_config_layer"] = True
+
             results["configs"][plate_info["config"]] = plate_config
 
         return results
+
     def validate_zymocube_ctrl_ini(self) -> Dict[str, Any]:
         """
         Valide le fichier ZymoCubeCtrl.ini
@@ -403,8 +428,8 @@ class ConfigChecker:
             "plate_types": []
         }
 
-        # Vérification des sections obligatoires
-        required_sections = ["Motors", "Defaults", "PlateType", "AutoFocus"]
+        # Vérification des sections obligatoires (PlateType exclu car conditionnel)
+        required_sections = ["Motors", "Defaults", "AutoFocus"]
         for section in required_sections:
             if section not in config:
                 results["errors"].append(f"Section [{section}] manquante")
@@ -436,7 +461,7 @@ class ConfigChecker:
                 results["values"]["video_preview"] = video_preview
 
                 if video_preview.lower() != "false":
-                    results["warnings"].append(
+                    results["errors"].append(
                         f"Valeur incorrecte pour [Defaults] VideoPreview: "
                         f"'{video_preview}' (attendu: 'false')"
                     )
@@ -457,10 +482,51 @@ class ConfigChecker:
                 results["errors"].append("Propriété 'ImageDestDir' manquante dans [Defaults]")
                 results["config_valid"] = False
 
-        # Liste des types de plaques
+        # Vérification cohérente avec PlateConfig.ini (ConfigLayer)
+        plate_config_results = self.validate_plate_config_ini()
+        has_config_layer = any(
+            config.get("has_config_layer", False) for config in plate_config_results.get("configs", {}).values())
+
+        # Gestion des PlateType
         if "PlateType" in config:
             for plate_type, value in config["PlateType"].items():
                 if not plate_type.startswith("#"):
                     results["plate_types"].append(plate_type)
+
+        if has_config_layer:
+            # Récupérer les PlateType avec ConfigLayer
+            plate_types_with_config_layer = [
+                pt["name"] for pt in plate_config_results["plate_types"]
+                if
+                pt["config"] in plate_config_results["configs"] and plate_config_results["configs"][pt["config"]].get(
+                    "has_config_layer", False)
+            ]
+
+            if not results["plate_types"]:
+                # PlateType est requis car ConfigLayer est présent
+                results["errors"].append(
+                    "Section [PlateType] manquante dans ZymoCubeCtrl.ini alors que des ConfigLayer sont présents dans PlateConfig.ini")
+                results["config_valid"] = False
+            else:
+                # Vérifier que tous les PlateType avec ConfigLayer sont dans ZymoCubeCtrl.ini
+                missing_plate_types = [pt for pt in plate_types_with_config_layer if pt not in results["plate_types"]]
+                if missing_plate_types:
+                    results["errors"].append(
+                        f"Les PlateType suivants avec ConfigLayer manquent dans [PlateType] de ZymoCubeCtrl.ini: {', '.join(missing_plate_types)}"
+                    )
+                    results["config_valid"] = False
+
+                # Vérifier que les PlateType dans ZymoCubeCtrl.ini ont un ConfigLayer dans PlateConfig.ini
+                extra_plate_types = [pt for pt in results["plate_types"] if pt not in plate_types_with_config_layer]
+                if extra_plate_types:
+                    results["errors"].append(
+                        f"Les PlateType suivants dans [PlateType] de ZymoCubeCtrl.ini n'ont pas de ConfigLayer dans PlateConfig.ini: {', '.join(extra_plate_types)}"
+                    )
+                    results["config_valid"] = False
+        else:
+            # Si aucun ConfigLayer dans PlateConfig.ini, PlateType est facultatif
+            if "PlateType" in config and results["plate_types"]:
+                logger.info(
+                    "Présence de [PlateType] dans ZymoCubeCtrl.ini sans ConfigLayer dans PlateConfig.ini, considéré comme valide (facultatif)")
 
         return results

@@ -30,11 +30,9 @@ def getNumberOfAreasInWellResultFile(file_path):
     Elle compte simplement le nombre de feuilles dans le xlsx
     :param file_path: Chemin vers le fichier de résultats de puits.
     """
-    # Lire le fichier Excel
     try:
-        xls = pd.ExcelFile(file_path)
-        # Retourner le nombre de feuilles (areas) dans le fichier Excel
-        return len(xls.sheet_names)
+        with pd.ExcelFile(file_path) as xls:  # Utilisation du gestionnaire de contexte
+            return len(xls.sheet_names)
     except Exception as e:
         raise ValueError(f"Erreur lors de la lecture du fichier de résultats de puits: {e}")
 
@@ -48,69 +46,66 @@ def getDataForAreaInWellResultFile(file_path, area_index):
     :return: Dictionnaire avec les listes 'activity' et 'values'.
     """
     try:
-        # Lire le fichier Excel
-        xls = pd.ExcelFile(file_path)
-        sheet_names = xls.sheet_names
+        with pd.ExcelFile(file_path) as xls:  # Utilisation du gestionnaire de contexte
+            sheet_names = xls.sheet_names
 
-        if area_index >= len(sheet_names):
-            raise IndexError(f"L'index d'area {area_index} est hors limites. Areas disponibles: {len(sheet_names)}")
+            if area_index >= len(sheet_names):
+                raise IndexError(f"L'index d'area {area_index} est hors limites. Areas disponibles: {len(sheet_names)}")
 
-        # Lire la feuille spécifique
-        sheet_name = sheet_names[area_index]
-        df = pd.read_excel(file_path, sheet_name=sheet_name)
+            # Lire la feuille spécifique
+            sheet_name = sheet_names[area_index]
+            df = pd.read_excel(xls, sheet_name=sheet_name)
 
-        # Trouver la section WellCalibrationResult
-        # Chercher la ligne qui contient "WellCalibrationResult"
-        calibration_start_row = None
-        for idx, row in df.iterrows():
-            if any(str(cell).startswith('WellCalibrationResult') for cell in row if pd.notna(cell)):
-                calibration_start_row = idx
-                break
+            # Trouver la section WellCalibrationResult
+            calibration_start_row = None
+            for idx, row in df.iterrows():
+                if any(str(cell).startswith('WellCalibrationResult') for cell in row if pd.notna(cell)):
+                    calibration_start_row = idx
+                    break
 
-        if calibration_start_row is None:
-            raise ValueError(f"Section WellCalibrationResult non trouvée dans {sheet_name}")
+            if calibration_start_row is None:
+                raise ValueError(f"Section WellCalibrationResult non trouvée dans {sheet_name}")
 
-        # Les données actuelles commencent après la ligne d'en-tête
-        # Chercher la ligne avec les en-têtes de colonnes (Activity, etc.)
-        header_row = None
-        for idx in range(calibration_start_row + 1, len(df)):
-            row = df.iloc[idx]
-            if 'Activity' in str(row.iloc[0]) or any('Activity' in str(cell) for cell in row if pd.notna(cell)):
-                header_row = idx
-                break
+            # Chercher la ligne avec les en-têtes de colonnes (Activity, etc.)
+            header_row = None
+            for idx in range(calibration_start_row + 1, len(df)):
+                row = df.iloc[idx]
+                if 'Activity' in str(row.iloc[0]) or any('Activity' in str(cell) for cell in row if pd.notna(cell)):
+                    header_row = idx
+                    break
 
-        if header_row is None:
-            raise ValueError(f"En-tête de colonne Activity non trouvé dans {sheet_name}")
+            if header_row is None:
+                raise ValueError(f"En-tête de colonne Activity non trouvé dans {sheet_name}")
 
-        # Extraire les données à partir de la ligne après les en-têtes
-        data_start_row = header_row + 1
+            # Extraire les données à partir de la ligne après les en-têtes
+            data_start_row = header_row + 1
 
-        # Extraire l'activité et les valeurs (4ème colonne = écart type)
-        activities = []
-        values = []
+            # Extraire l'activité et les valeurs (4ème colonne = écart type)
+            activities = []
+            values = []
 
-        for idx in range(data_start_row, len(df)):
-            row = df.iloc[idx]
+            for idx in range(data_start_row, len(df)):
+                row = df.iloc[idx]
 
-            # Arrêter si on rencontre une ligne vide ou une autre section
-            if pd.isna(row.iloc[0]) or str(row.iloc[0]).strip() == '':
-                break
+                # Arrêter si on rencontre une ligne vide ou une autre section
+                if pd.isna(row.iloc[0]) or str(row.iloc[0]).strip() == '':
+                    break
 
-            # Vérifier si cela ressemble à une ligne de données (première colonne doit être une activité numérique)
-            try:
-                activity = float(str(row.iloc[0]).replace(',', '.'))  # Gérer le séparateur décimal virgule
-                if len(row) >= 4 and pd.notna(row.iloc[3]):  # 4ème colonne (index 3)
-                    value = float(str(row.iloc[3]).replace(',', '.'))  # Gérer le séparateur décimal virgule
-                    activities.append(activity)
-                    values.append(value)
-            except (ValueError, IndexError):
-                # Ignorer les lignes qui ne contiennent pas de données numériques
-                continue
+                # Vérifier si cela ressemble à une ligne de données (première colonne doit être une activité numérique)
+                try:
+                    activity = float(str(row.iloc[0]).replace(',', '.'))  # Gérer le séparateur décimal virgule
+                    if len(row) >= 4 and pd.notna(row.iloc[3]):  # 4ème colonne (index 3)
+                        value = float(str(row.iloc[3]).replace(',', '.'))  # Gérer le séparateur décimal virgule
+                        activities.append(activity)
+                        values.append(value)
+                except (ValueError, IndexError):
+                    # Ignorer les lignes qui ne contiennent pas de données numériques
+                    continue
 
-        return {
-            'activity': activities,
-            'values': values
-        }
+            return {
+                'activity': activities,
+                'values': values
+            }
 
     except Exception as e:
         raise ValueError(f"Erreur lors de la lecture de l'area {area_index} depuis {file_path}: {e}")
@@ -125,70 +120,69 @@ def getBlankDataForAreaInWellResultFile(file_path, area_index):
     :return: Liste des valeurs de dégradation des blancs non exclus.
     """
     try:
-        # Lire le fichier Excel
-        xls = pd.ExcelFile(file_path)
-        sheet_names = xls.sheet_names
+        with pd.ExcelFile(file_path) as xls:  # Utilisation du gestionnaire de contexte
+            sheet_names = xls.sheet_names
 
-        if area_index >= len(sheet_names):
-            raise IndexError(f"L'index d'area {area_index} est hors limites. Areas disponibles: {len(sheet_names)}")
+            if area_index >= len(sheet_names):
+                raise IndexError(f"L'index d'area {area_index} est hors limites. Areas disponibles: {len(sheet_names)}")
 
-        # Lire la feuille spécifique
-        sheet_name = sheet_names[area_index]
-        df = pd.read_excel(file_path, sheet_name=sheet_name)
+            # Lire la feuille spécifique
+            sheet_name = sheet_names[area_index]
+            df = pd.read_excel(xls, sheet_name=sheet_name)
 
-        # Trouver la section WellBlankResult
-        blank_start_row = None
-        for idx, row in df.iterrows():
-            if any(str(cell).startswith('WellBlankResult') for cell in row if pd.notna(cell)):
-                blank_start_row = idx
-                break
+            # Trouver la section WellBlankResult
+            blank_start_row = None
+            for idx, row in df.iterrows():
+                if any(str(cell).startswith('WellBlankResult') for cell in row if pd.notna(cell)):
+                    blank_start_row = idx
+                    break
 
-        if blank_start_row is None:
-            raise ValueError(f"Section WellBlankResult non trouvée dans {sheet_name}")
+            if blank_start_row is None:
+                raise ValueError(f"Section WellBlankResult non trouvée dans {sheet_name}")
 
-        # Chercher la ligne avec les en-têtes de colonnes
-        header_row = None
-        for idx in range(blank_start_row + 1, len(df)):
-            row = df.iloc[idx]
-            if 'Well' in str(row.iloc[0]) or any('Well' in str(cell) for cell in row if pd.notna(cell)):
-                header_row = idx
-                break
+            # Chercher la ligne avec les en-têtes de colonnes
+            header_row = None
+            for idx in range(blank_start_row + 1, len(df)):
+                row = df.iloc[idx]
+                if 'Well' in str(row.iloc[0]) or any('Well' in str(cell) for cell in row if pd.notna(cell)):
+                    header_row = idx
+                    break
 
-        if header_row is None:
-            raise ValueError(f"En-tête de colonne Well non trouvé dans {sheet_name}")
+            if header_row is None:
+                raise ValueError(f"En-tête de colonne Well non trouvé dans {sheet_name}")
 
-        # Extraire les données à partir de la ligne après les en-têtes
-        data_start_row = header_row + 1
+            # Extraire les données à partir de la ligne après les en-têtes
+            data_start_row = header_row + 1
 
-        blank_values = []
+            blank_values = []
 
-        for idx in range(data_start_row, len(df)):
-            row = df.iloc[idx]
+            for idx in range(data_start_row, len(df)):
+                row = df.iloc[idx]
 
-            # Arrêter si on rencontre une ligne vide ou une autre section
-            if pd.isna(row.iloc[0]) or str(row.iloc[0]).strip() == '':
-                break
+                # Arrêter si on rencontre une ligne vide ou une autre section
+                if pd.isna(row.iloc[0]) or str(row.iloc[0]).strip() == '':
+                    break
 
-            # Vérifier si la ligne contient des données de blancs
-            try:
-                # Colonnes attendues : Well, Trouble, Zymunit, Exclusion, Exclusion comment
-                well = str(row.iloc[0]).strip()
-                if len(row) >= 4:
-                    zymunit_value = row.iloc[2]  # Colonne Zymunit (index 2)
-                    exclusion = row.iloc[3]  # Colonne Exclusion (index 3)
+                # Vérifier si la ligne contient des données de blancs
+                try:
+                    # Colonnes attendues : Well, Trouble, Zymunit, Exclusion, Exclusion comment
+                    well = str(row.iloc[0]).strip()
+                    if len(row) >= 4:
+                        zymunit_value = row.iloc[2]  # Colonne Zymunit (index 2)
+                        exclusion = row.iloc[3]  # Colonne Exclusion (index 3)
 
-                    # Vérifier que l'exclusion est False et que la valeur Zymunit est valide
-                    if (str(exclusion).lower() == 'false' and
-                            pd.notna(zymunit_value) and
-                            str(zymunit_value).strip() != ''):
-                        zymunit_float = float(str(zymunit_value).replace(',', '.'))
-                        blank_values.append(zymunit_float)
+                        # Vérifier que l'exclusion est False et que la valeur Zymunit est valide
+                        if (str(exclusion).lower() == 'false' and
+                                pd.notna(zymunit_value) and
+                                str(zymunit_value).strip() != ''):
+                            zymunit_float = float(str(zymunit_value).replace(',', '.'))
+                            blank_values.append(zymunit_float)
 
-            except (ValueError, IndexError):
-                # Ignorer les lignes qui ne contiennent pas de données numériques valides
-                continue
+                except (ValueError, IndexError):
+                    # Ignorer les lignes qui ne contiennent pas de données numériques valides
+                    continue
 
-        return blank_values
+            return blank_values
 
     except Exception as e:
         raise ValueError(f"Erreur lors de la lecture des blancs pour l'area {area_index} depuis {file_path}: {e}")
@@ -273,23 +267,15 @@ def calculateLODLOQComparison(acquisition_folder, reference_folder):
             diff_lod = acq_results['lod'] - ref_results['lod']
             diff_loq = acq_results['loq'] - ref_results['loq']
 
-            # Verifier la validité des résultats avec la tolérance acceptable
+            # Vérifier la validité des résultats avec la tolérance acceptable
             lod_tolerance = calculate_lod_loq_tolerance(ref_results['lod'])
             loq_tolerance = calculate_lod_loq_tolerance(ref_results['loq'])
 
             # Vérifier si les différences sont dans la tolérance
-            # La différence est considérée valide si elle est négative ou dans la tolérance
-            # Si la différence est négative, elle est toujours considérée valide (pas de déviation)
-            # Sinon, elle doit être dans la tolérance
-            is_lod_valid = True if diff_lod < 0 else  diff_lod <= lod_tolerance
-            is_loq_valid = True if diff_lod < 0 else diff_loq <= loq_tolerance
+            is_lod_valid = True if diff_lod < 0 else diff_lod <= lod_tolerance
+            is_loq_valid = True if diff_loq < 0 else diff_loq <= loq_tolerance
 
             print("is_lod_valid:", is_lod_valid, "is_loq_valid:", is_loq_valid)
-
-
-            # Calculer les différences relatives en pourcentage
-            # diff_lod_percent = (diff_lod / ref_results['lod']) * 100 if ref_results['lod'] != 0 else 0
-            # diff_loq_percent = (diff_loq / ref_results['loq']) * 100 if ref_results['loq'] != 0 else 0
 
             comparison_results.append({
                 'Area': area_index + 1,
@@ -315,8 +301,8 @@ def calculateLODLOQComparison(acquisition_folder, reference_folder):
                 'LOQ_Acq': 'ERROR',
                 'Diff_LOD': 'ERROR',
                 'Diff_LOQ': 'ERROR',
-                'Diff_LOD_%': 'ERROR',
-                'Diff_LOQ_%': 'ERROR',
+                'Lod_Valid': 'ERROR',
+                'Loq_Valid': 'ERROR',
                 'N_Blanks_Ref': 'ERROR',
                 'N_Blanks_Acq': 'ERROR'
             })
@@ -355,7 +341,7 @@ def compareActivityRanges(acquisition_range, reference_range):
     if len(acq_array) != len(ref_array):
         return False
 
-    # Vérifier si les valeurs sont approximativement égales (permettant de petites différences de virgule flottante)
+    # Vérifier si les valeurs sont approximativement égales
     return np.allclose(acq_array, ref_array, rtol=1e-6)
 
 
@@ -394,7 +380,6 @@ def calculate_lod_loq_tolerance(reference_value):
     :param reference_value:
     :return: float: Valeur de tolérance calculée.
     """
-
     if reference_value <= 0:
         return 5
     elif reference_value <= 5:
@@ -408,6 +393,7 @@ def calculate_lod_loq_tolerance(reference_value):
     else:
         # Pour les valeurs > 10, la tolérance est toujours 2
         return 2
+
 
 def processWellResults(acquisition_folder, reference_folder):
     """
@@ -459,10 +445,7 @@ def processWellResults(acquisition_folder, reference_folder):
             tolerance = calculate_tolerance(reference_value)
 
             # Déterminer si la différence est dans la tolérance
-            # La différence est considérée valide si elle est négative ou dans la tolérance
-            # Si la différence est négative, elle est toujours considérée valide (pas de déviation)
-            # Sinon, elle doit être dans la tolérance
-            is_valid = True if diff < 0 else  diff <= tolerance
+            is_valid = True if diff < 0 else diff <= tolerance
 
             final_results.append({
                 'activité': activity,
@@ -477,7 +460,6 @@ def processWellResults(acquisition_folder, reference_folder):
     results_df = pd.DataFrame(final_results)
 
     return results_df
-
 
 
 # Exemple d'utilisation

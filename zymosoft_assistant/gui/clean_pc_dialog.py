@@ -59,6 +59,11 @@ class CleanPCDialog(QDialog):
         button_layout = QHBoxLayout()
         main_layout.addLayout(button_layout)
 
+        # Add folder button
+        self.add_folder_button = QPushButton("Ajouter un dossier...")
+        self.add_folder_button.clicked.connect(self.add_folder)
+        button_layout.addWidget(self.add_folder_button)
+
         self.move_button = QPushButton("Déplacer la sélection...")
         self.move_button.clicked.connect(self.move_selected_items)
         button_layout.addWidget(self.move_button)
@@ -83,6 +88,25 @@ class CleanPCDialog(QDialog):
                 item = QTreeWidgetItem(self.tree, [os.path.basename(path), path])
                 item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
                 item.setCheckState(0, Qt.Checked)
+
+    def add_folder(self):
+        """
+        Opens a dialog to select a folder and adds it to the tree widget.
+        """
+        folder_path = QFileDialog.getExistingDirectory(self, "Choisir un dossier à ajouter", "/")
+        if folder_path:
+            if folder_path in self.items_to_clean:
+                QMessageBox.warning(self, "Dossier déjà ajouté", "Ce dossier est déjà dans la liste des éléments à nettoyer.")
+                return
+            if os.path.exists(folder_path):
+                self.items_to_clean.append(folder_path)
+                item = QTreeWidgetItem(self.tree, [os.path.basename(folder_path), folder_path])
+                item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                item.setCheckState(0, Qt.Checked)
+                logger.info(f"Dossier ajouté à la liste de nettoyage : {folder_path}")
+            else:
+                QMessageBox.critical(self, "Erreur", "Le dossier sélectionné n'existe pas.")
+                logger.error(f"Tentative d'ajout d'un dossier inexistant : {folder_path}")
 
     def get_selected_items(self):
         """

@@ -967,7 +967,8 @@ class Step2Checks(StepFrame):
         # Statut global
         status_text = "✓ Valide" if config_ini_results.get("config_valid", False) else "✗ Non valide"
         status_label = QLabel(status_text)
-        status_label.setStyleSheet(f"color: {COLOR_SCHEME.get('success', '#28a745') if config_ini_results.get('config_valid', False) else COLOR_SCHEME.get('error', '#dc3545')}; font-weight: bold; font-size: 12pt; margin-bottom: 10px;")
+        status_label.setStyleSheet(
+            f"color: {COLOR_SCHEME.get('success', '#28a745') if config_ini_results.get('config_valid', False) else COLOR_SCHEME.get('error', '#dc3545')}; font-weight: bold; font-size: 12pt; margin-bottom: 10px;")
         self.config_ini_layout.addWidget(status_label)
 
         # Tableau détaillé des vérifications
@@ -985,18 +986,23 @@ class Step2Checks(StepFrame):
             ("Application.ExportAcquisitionDetailResults", "ExportAcquisitionDetailResults"),
             ("Hardware.Controller", "Controller"),
             ("Interf.Worker", "Worker"),
-            ("Reflecto.Worker", "Worker")
         ]
 
-        # Ajout dynamique des valeurs présentes
+        # Ajouter Reflecto.Worker uniquement si pertinent
         values = config_ini_results.get("values", {})
+        errors = config_ini_results.get("errors", [])
+        has_reflecto_worker_error = any("Reflecto.Worker" in err or "ConfigLayer" in err for err in errors)
+        if values.get("Reflecto.Worker") or has_reflecto_worker_error:
+            checks.append(("Reflecto.Worker", "Worker"))
+
+        # Ajout dynamique des valeurs présentes
         row = 0
         for param, key in checks:
             value = values.get(param, "")
             statut = "✓"
             if "errors" in config_ini_results and any(param.split(".")[1] in e for e in config_ini_results["errors"]):
                 statut = "✗"
-            elif value == "":
+            elif value == "" and param != "Reflecto.Worker":  # Ne pas marquer Reflecto.Worker comme erreur s'il est absent
                 statut = "✗"
             table.insertRow(row)
             table.setItem(row, 0, QTableWidgetItem(param))
