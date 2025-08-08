@@ -564,7 +564,7 @@ class Step4Closure(StepFrame):
 
         return True
 
-    def validate(self):
+    def validate(self, generate_report=False):
         """
         Valide les données de l'étape 4
 
@@ -651,9 +651,6 @@ class Step4Closure(StepFrame):
         # Mettre à jour le résumé
         self._update_summary()
 
-        # Activer le bouton de rapport si un rapport a déjà été généré
-        if "final_report_path" in self.main_window.session_data:
-            self.report_button.setEnabled(True)
 
         logger.info("Données de l'étape 4 chargées")
 

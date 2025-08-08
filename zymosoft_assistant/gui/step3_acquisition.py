@@ -34,7 +34,6 @@ from zymosoft_assistant.scripts.Routine_VALIDATION_ZC_18022025 import compare_en
     comparaison_ZC_to_ref_v1_nanofilm
 from zymosoft_assistant.scripts.getDatasFromWellResults import processWellResults, calculateLODLOQComparison
 from zymosoft_assistant.core.file_validator import FileValidator
-from zymosoft_assistant.scripts.processAcquisitionLog import analyzeLogFile, generateLogAnalysisReport
 from .step_frame import StepFrame
 
 logger = logging.getLogger(__name__)
@@ -3146,7 +3145,7 @@ class Step3Acquisition(StepFrame):
                                  f"Une erreur est survenue lors de la génération du rapport:\n{str(e)}")
 
     # Data management methods
-    def validate(self):
+    def validate(self, generate_report=False):
         """
         Valide les données de l'étape 3
         """
