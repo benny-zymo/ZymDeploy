@@ -6,11 +6,7 @@ Module de la fenêtre principale de l'assistant d'installation ZymoSoft
 """
 
 import os
-import sys
 import logging
-import uuid
-import datetime
-import json
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QProgressBar, QMessageBox,
                              QFileDialog, QStackedWidget, QAction, QMenu, QMenuBar, QDialog)
@@ -526,7 +522,7 @@ border: none;
                 elif i == index:
                     indicator_container.setProperty("status", "current")
                     indicator.setProperty("status", "current")
-                elif not self.initial_load and not self.steps[i].validate():
+                elif not self.initial_load and not self.steps[i].validate(generate_report=False):
                     indicator_container.setProperty("status", "invalid")
                     indicator.setProperty("status", "invalid")
                 else:
@@ -601,7 +597,7 @@ border: none;
         try:
             # Validation de l'étape actuelle
             logger.info(f"Validation de l'étape {self.current_step_index + 1}")
-            if not self.steps[self.current_step_index].validate():
+            if not self.steps[self.current_step_index].validate(generate_report=True if self.current_step_index == 1 else False):
                 logger.warning(f"Validation de l'étape {self.current_step_index + 1} échouée")
                 QMessageBox.critical(self, "Validation", "Veuillez corriger les erreurs avant de continuer.")
                 return

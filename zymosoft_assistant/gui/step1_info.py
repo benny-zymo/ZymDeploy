@@ -182,7 +182,7 @@ class Step1Info(StepFrame):
         self.cs_responsible_edit.textChanged.connect(self.validate)
         self.instrumentation_responsible_edit.textChanged.connect(self.validate)
 
-    def validate(self):
+    def validate(self, generate_report=False):
         """
         Valide les données de l'étape 1
 

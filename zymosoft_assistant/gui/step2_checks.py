@@ -1276,7 +1276,7 @@ class Step2Checks(StepFrame):
             QMessageBox.critical(self.widget, "Erreur",
                                  f"Une erreur est survenue lors de la génération du rapport:\n{str(e)}")
 
-    def validate(self):
+    def validate(self, generate_report=False):
         """
         Valide les données de l'étape 2
         """
@@ -1284,12 +1284,22 @@ class Step2Checks(StepFrame):
             QMessageBox.critical(self.widget, "Validation", "Veuillez effectuer l'analyse avant de continuer.")
             return False
 
+
+
         if not self.installation_valid:
             reply = QMessageBox.question(self.widget, "Validation",
                                          "L'installation n'est pas valide. Voulez-vous quand même continuer ?",
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
             if reply != QMessageBox.Yes:
                 return False
+
+        if generate_report:
+            generate_report_reply = QMessageBox.question(self.widget, "Générer le rapport",
+                                                         "Voulez-vous générer un rapport des vérifications ?",
+                                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+            if generate_report_reply == QMessageBox.Yes:
+                self.generate_report()
+
 
         return True
 

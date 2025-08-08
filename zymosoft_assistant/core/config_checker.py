@@ -465,6 +465,7 @@ class ConfigChecker:
                         f"Valeur incorrecte pour [Defaults] VideoPreview: "
                         f"'{video_preview}' (attendu: 'false')"
                     )
+                    results["config_valid"] = False
             else:
                 results["errors"].append("Propriété 'VideoPreview' manquante dans [Defaults]")
                 results["config_valid"] = False

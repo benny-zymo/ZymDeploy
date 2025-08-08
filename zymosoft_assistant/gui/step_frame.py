@@ -52,7 +52,7 @@ class StepFrame(QObject):
         """
         self.widget.hide()
 
-    def validate(self):
+    def validate(self, generate_report=False):
         """
         Valide les données de l'étape
 
