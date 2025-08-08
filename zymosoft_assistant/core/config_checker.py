@@ -107,7 +107,13 @@ class ConfigChecker:
         # Vérification des dossiers principaux
         bin_path = os.path.join(self.base_path, "bin")
         etc_path = os.path.join(self.base_path, "etc")
-        resultats_path = os.path.join(self.base_path, "Resultats")
+
+
+        # Get the parent directory of self.base_path
+        parent_path = os.path.dirname(self.base_path)
+
+        # Join the parent path with your new directory name
+        resultats_path = os.path.join(parent_path, "Resultats")
 
         results["bin_exists"] = os.path.exists(bin_path)
         results["etc_exists"] = os.path.exists(etc_path)

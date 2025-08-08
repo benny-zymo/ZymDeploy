@@ -6,14 +6,12 @@
   <component name="ChangeListManager">
     <list default="true" id="70acc574-1de3-4cde-b8e4-3bf8e216d535" name="Changes" comment="Enhance Reflecto.Worker logic, error handling, and UI consistency&#10;&#10;- Updated Step2Checks to conditionally include Reflecto.Worker based on configuration values or errors.&#10;- Optimized error handling in PlateConfig.ini validation by integrating ConfigLayer awareness.&#10;- Adjusted Config.ini and ZymoCubeCtrl.ini checks for better compatibility with PlateConfig.ini.&#10;- Improved folder addition logic in CleanPCDialog and adopted with-statement usage for Excel file handling to prevent resource leaks.&#10;- Refactored redundant code and removed unused comments for better readability.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/attached_assets/Pasted--Types-de-plaques-PLATE-TYPES-id-micro-depot-name-Micro-d-p-t--1751371283314_1751371283315.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/zymosoft_assistant/core/config_checker.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/core/config_checker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/core/file_validator.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/core/file_validator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/main_window.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step1_info.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step1_info.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step2_checks.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step2_checks.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step3_acquisition.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step3_acquisition.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step4_closure.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step4_closure.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/gui/step_frame.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/gui/step_frame.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/scripts/cleanLog.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/scripts/cleanLog.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/zymosoft_assistant/scripts/processAcquisitionLog.py" beforeDir="false" afterPath="$PROJECT_DIR$/zymosoft_assistant/scripts/processAcquisitionLog.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,7 +32,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="master" />
+        <entry key="$PROJECT_DIR$" value="step4-refactor-and-pdf-merge" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -62,30 +60,32 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Batch.build_executable.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.cli.executor&quot;: &quot;Run&quot;,
-    &quot;Python.file_validator.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main_window.executor&quot;: &quot;Run&quot;,
-    &quot;Python.step1_info.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;step4-refactor-and-pdf-merge&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;settings.sync&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Batch.build_executable.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.cleanLog.executor": "Run",
+    "Python.cli.executor": "Run",
+    "Python.file_validator.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.main_window.executor": "Run",
+    "Python.processAcquisitionLog.executor": "Run",
+    "Python.step1_info.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "junie.onboarding.icon.badge.shown": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "run.code.analysis.last.selected.profile": "aDefault",
+    "settings.editor.selected.configurable": "settings.sync",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\PCP-Zymoptiq\PycharmProjects\ZymDeploy\zymosoft_assistant\scripts" />
@@ -200,11 +200,12 @@
     <SUITE FILE_PATH="coverage/ZymDeploy$file_validator.coverage" NAME="file_validator Coverage Results" MODIFIED="1753971138122" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/core" />
     <SUITE FILE_PATH="coverage/ZymDeploy$.coverage" NAME=" Coverage Results" MODIFIED="1753951086468" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/ZymDeploy$step1_info.coverage" NAME="step1_info Coverage Results" MODIFIED="1753260355723" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/gui" />
-    <SUITE FILE_PATH="coverage/ZymDeploy$processAcquisitionLog.coverage" NAME="processAcquisitionLog Coverage Results" MODIFIED="1753874836503" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/scripts" />
     <SUITE FILE_PATH="coverage/ZymDeploy$getDatasFromWellResults.coverage" NAME="getDatasFromWellResults Coverage Results" MODIFIED="1752584106832" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/scripts" />
-    <SUITE FILE_PATH="coverage/ZymDeploy$main.coverage" NAME="main Coverage Results" MODIFIED="1754572687460" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant" />
+    <SUITE FILE_PATH="coverage/ZymDeploy$processAcquisitionLog.coverage" NAME="processAcquisitionLog Coverage Results" MODIFIED="1754647783172" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/scripts" />
+    <SUITE FILE_PATH="coverage/ZymDeploy$main.coverage" NAME="main Coverage Results" MODIFIED="1754653967044" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant" />
     <SUITE FILE_PATH="coverage/ZymDeploy$main_window.coverage" NAME="main_window Coverage Results" MODIFIED="1751356687010" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/gui" />
     <SUITE FILE_PATH="coverage/ZymDeploy$report_generator.coverage" NAME="report_generator Coverage Results" MODIFIED="1754306290701" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/core" />
+    <SUITE FILE_PATH="coverage/ZymDeploy$cleanLog.coverage" NAME="cleanLog Coverage Results" MODIFIED="1754647227226" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/scripts" />
     <SUITE FILE_PATH="coverage/ZymDeploy$step4_closure.coverage" NAME="step4_closure Coverage Results" MODIFIED="1754380519370" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/zymosoft_assistant/gui" />
   </component>
 </project>

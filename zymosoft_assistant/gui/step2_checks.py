@@ -811,8 +811,14 @@ class Step2Checks(StepFrame):
 
     def _display_summary_results(self):
         """
-        Affiche un résumé de tous les résultats des vérifications avec des indicateurs de statut
+        Affiche un résumé des vérifications avec des catégories repliables et des sous-lignes pour les détails.
+        Le nom de chaque catégorie inclut le nombre de détails (ex: 'Structure d'installation (7)').
+        Les catégories avec erreurs sont en rouge, et les sous-lignes d'erreurs sont également en rouge.
         """
+        from PyQt5.QtGui import QFont, QColor
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QLabel, QTableWidget, QTableWidgetItem, QHeaderView
+
         # Titre
         title_label = QLabel("Résumé des vérifications")
         title_label.setStyleSheet("font-weight: bold; font-size: 14pt; margin-bottom: 10px;")
@@ -820,12 +826,14 @@ class Step2Checks(StepFrame):
 
         # Tableau des résultats
         table = QTableWidget()
-        table.setColumnCount(3)
-        table.setHorizontalHeaderLabels(["Catégorie", "Statut", "Détails"])
+        table.setColumnCount(2)  # Deux colonnes : Catégorie et Statut
+        table.setHorizontalHeaderLabels(["Catégorie", "Statut"])
         table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.summary_layout.addWidget(table)
+
+        # Dictionnaire pour suivre l'état déplié/replié de chaque catégorie
+        self.category_expanded = {}
 
         # Construction des détails pour chaque catégorie
         def build_details(result, keys_to_check=None, value_keys=None):
@@ -846,7 +854,14 @@ class Step2Checks(StepFrame):
                         if k in result.get("values", {}):
                             v = result["values"][k]
                             details.append(f"{k}: {v}")
-            return "\n".join(details)
+            return details
+
+        # Vérifier si une catégorie a des erreurs
+        def has_errors(result):
+            return isinstance(result, dict) and "errors" in result and len(result["errors"]) > 0
+
+        # Compter le nombre total de lignes nécessaires
+        categories = []
 
         # Détails pour la structure
         structure = self.check_results.get("structure", {})
@@ -857,6 +872,8 @@ class Step2Checks(StepFrame):
                 "zymocubectrl_exists", "zymosoft_exists", "workers_exists", "version_match"
             ]
         )
+        categories.append(
+            ("Structure d'installation", structure.get("installation_valid", False), structure_details, structure))
 
         # Détails pour Config.ini
         config_ini = self.check_results.get("config_ini", {})
@@ -864,16 +881,19 @@ class Step2Checks(StepFrame):
             config_ini,
             value_keys=list(config_ini.get("values", {}).keys()) if "values" in config_ini else []
         )
+        categories.append(("Config.ini", config_ini.get("config_valid", False), config_ini_details, config_ini))
 
         # Détails pour PlateConfig.ini
         plate_config_ini = self.check_results.get("plate_config_ini", {})
         plate_config_ini_details = build_details(plate_config_ini)
         if "errors" in plate_config_ini and plate_config_ini["errors"]:
             for err in plate_config_ini["errors"]:
-                plate_config_ini_details += f"\n{err}"
+                plate_config_ini_details.append(f"Erreur: {err}")
         if "plate_types" in plate_config_ini and plate_config_ini["plate_types"]:
             for pt in plate_config_ini["plate_types"]:
-                plate_config_ini_details += f"\nType: {pt.get('name','')} Config: {pt.get('config','')}"
+                plate_config_ini_details.append(f"Type: {pt.get('name', '')} Config: {pt.get('config', '')}")
+        categories.append(("PlateConfig.ini", plate_config_ini.get("config_valid", False), plate_config_ini_details,
+                           plate_config_ini))
 
         # Détails pour ZymoCubeCtrl.ini
         zymocube_ctrl_ini = self.check_results.get("zymocube_ctrl_ini", {})
@@ -882,9 +902,11 @@ class Step2Checks(StepFrame):
             value_keys=list(zymocube_ctrl_ini.get("values", {}).keys()) if "values" in zymocube_ctrl_ini else []
         )
         if "plate_types" in zymocube_ctrl_ini and zymocube_ctrl_ini["plate_types"]:
-            zymocube_ctrl_ini_details += "\nTypes de plaques: " + ", ".join(zymocube_ctrl_ini["plate_types"])
+            zymocube_ctrl_ini_details.append("Types de plaques: " + ", ".join(zymocube_ctrl_ini["plate_types"]))
+        categories.append(("ZymoCubeCtrl.ini", zymocube_ctrl_ini.get("config_valid", False), zymocube_ctrl_ini_details,
+                           zymocube_ctrl_ini))
 
-        # Compter les erreurs et avertissements
+        # Détails pour erreurs et avertissements
         errors_count = 0
         warnings_count = 0
         for key, value in self.check_results.items():
@@ -893,36 +915,73 @@ class Step2Checks(StepFrame):
                     errors_count += len(value["errors"])
                 if "warnings" in value:
                     warnings_count += len(value["warnings"])
+        errors_warnings_details = [f"{errors_count} erreur(s)", f"{warnings_count} avertissement(s)"]
+        errors_warnings_result = {"errors": [] if errors_count == 0 else [
+            "Erreurs détectées"]}  # Simuler un résultat pour la vérification d'erreurs
+        categories.append(
+            ("Erreurs et avertissements", errors_count == 0, errors_warnings_details, errors_warnings_result))
 
-        # Ajouter les résultats au tableau
-        categories = [
-            ("Structure d'installation", structure.get("installation_valid", False), structure_details),
-            ("Config.ini", config_ini.get("config_valid", False), config_ini_details),
-            ("PlateConfig.ini", plate_config_ini.get("config_valid", False), plate_config_ini_details),
-            ("ZymoCubeCtrl.ini", zymocube_ctrl_ini.get("config_valid", False), zymocube_ctrl_ini_details),
-            ("Erreurs et avertissements", errors_count == 0, f"{errors_count} erreur(s), {warnings_count} avertissement(s)")
-        ]
+        # Calculer le nombre total de lignes
+        row_count = sum(1 + len(details) for _, _, details, _ in categories)
+        table.setRowCount(row_count)
 
-        table.setRowCount(len(categories))
+        # Connecter le signal de clic sur une cellule
+        def toggle_category(row):
+            # Vérifier si la ligne cliquée est une ligne principale (catégorie)
+            for cat_idx, (category, _, details, _) in self.category_row_map.items():
+                if row == cat_idx:
+                    # Basculer l'état déplié/replié
+                    self.category_expanded[category] = not self.category_expanded.get(category, False)
+                    # Afficher ou masquer les sous-lignes
+                    for i in range(cat_idx + 1, cat_idx + 1 + len(details)):
+                        table.setRowHidden(i, not self.category_expanded[category])
+                    # Mettre à jour l'indicateur visuel (flèche)
+                    category_item = table.item(cat_idx, 0)
+                    arrow = "▼" if self.category_expanded[category] else "▶"
+                    category_item.setText(f"{category} ({len(details)})")
+                    break
+
+        table.cellClicked.connect(toggle_category)
 
         # Remplir le tableau
-        for i, (category, is_valid, details_text) in enumerate(categories):
-            category_item = QTableWidgetItem(category)
-            table.setItem(i, 0, category_item)
+        current_row = 0
+        self.category_row_map = {}  # Associe chaque ligne principale à sa catégorie et ses détails
+        for category, is_valid, details_list, result in categories:
+            # Initialiser l'état replié pour la catégorie
+            self.category_expanded[category] = False
+
+            # Ligne principale pour la catégorie
+            category_item = QTableWidgetItem(f"{category} ({len(details_list)})")
+            category_item.setFont(QFont("Arial", 10, QFont.Bold))  # Police en gras pour la catégorie
+            if has_errors(result):
+                category_item.setForeground(QColor("red"))  # Mettre en rouge si erreur
+            table.setItem(current_row, 0, category_item)
 
             status_text = "✓" if is_valid else "✗"
             status_item = QTableWidgetItem(status_text)
             status_item.setTextAlignment(Qt.AlignCenter)
-            status_item.setForeground(Qt.green if is_valid else Qt.red)
-            table.setItem(i, 1, status_item)
+            status_item.setForeground(QColor("green") if is_valid else QColor("red"))
+            table.setItem(current_row, 1, status_item)
 
-            details_item = QTableWidgetItem(details_text)
-            details_item.setToolTip(details_text)
-            table.setItem(i, 2, details_item)
+            # Enregistrer la ligne principale pour la gestion du clic
+            self.category_row_map[current_row] = (category, is_valid, details_list, result)
+
+            current_row += 1
+
+            # Ajouter les sous-lignes pour les détails (masquées par défaut)
+            for detail in details_list:
+                detail_item = QTableWidgetItem(f"    {detail}")  # Indentation avec espaces
+                if detail.startswith("Erreur:"):
+                    detail_item.setForeground(QColor("red"))  # Mettre en rouge les erreurs
+                table.setItem(current_row, 0, detail_item)
+                table.setItem(current_row, 1, QTableWidgetItem(""))  # Colonne Statut vide pour les sous-lignes
+                table.setRowHidden(current_row, True)  # Masquer les sous-lignes par défaut
+                current_row += 1
 
         # Statut global
         global_status_label = QLabel(f"Statut global: {'✓ Valide' if self.installation_valid else '✗ Non valide'}")
-        global_status_label.setStyleSheet(f"font-size: 14pt; font-weight: bold; color: {COLOR_SCHEME.get('success', '#28a745') if self.installation_valid else COLOR_SCHEME.get('error', '#dc3545')};")
+        global_status_label.setStyleSheet(
+            f"font-size: 14pt; font-weight: bold; color: {COLOR_SCHEME.get('success', '#28a745') if self.installation_valid else COLOR_SCHEME.get('error', '#dc3545')};")
         global_status_label.setAlignment(Qt.AlignCenter)
         self.summary_layout.addWidget(global_status_label)
 

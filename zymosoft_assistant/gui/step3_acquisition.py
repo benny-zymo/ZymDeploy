@@ -95,7 +95,7 @@ class ToggleSwitch(QPushButton):
                 QPushButton {{
                     background-color: {COLOR_SCHEME.get('success', '#28a745')};
                     color: white;
-                    border-radius: 15px;
+                    border-radius: 8px;
                     font-weight: bold;
                 }}
             """)
@@ -105,7 +105,7 @@ class ToggleSwitch(QPushButton):
                 QPushButton {{
                     background-color: {COLOR_SCHEME.get('secondary', '#6c757d')};
                     color: white;
-                    border-radius: 15px;
+                    border-radius: 8px;
                     font-weight: bold;
                 }}
             """)
@@ -726,7 +726,7 @@ class Step3Acquisition(StepFrame):
 
         # Initialisation des valeurs par défaut
         self.plate_type_var = PLATE_TYPES[0]['id'] if PLATE_TYPES else ""
-        self.acquisition_mode_var = ACQUISITION_MODES[0]['id'] if ACQUISITION_MODES else ""
+        self.acquisition_mode_var = ACQUISITION_MODES[1]['id'] if ACQUISITION_MODES else ""
         self.results_folder_var = ""
         self.reference_folder_var = ""
 
@@ -1002,9 +1002,11 @@ class Step3Acquisition(StepFrame):
             box = SelectionBox(mode['name'], mode['id'])
             if self.acquisition_mode_var == mode['id']:
                 box.setChecked(True)
+
             box.toggled.connect(lambda checked, b=box: self._on_acquisition_mode_changed(checked, b))
             mode_layout.addWidget(box)
             self.acquisition_mode_group.addButton(box)
+
         options_layout.addWidget(mode_groupbox)
 
         self.config_layout.addStretch(1)
@@ -1049,9 +1051,9 @@ class Step3Acquisition(StepFrame):
         self.selection_layout.addWidget(validation_frame)
 
         # Option 1
-        validation_layout.addWidget(QLabel("Comparer aux références (mode expert)"), 0, 0)
+        validation_layout.addWidget(QLabel("Comparer aux références (mode expert uniquement)"), 0, 0)
         self.compare_to_ref_switch = ToggleSwitch()
-        self.compare_to_ref_switch.setChecked(self.do_compare_to_ref)
+        self.compare_to_ref_switch.setChecked(self.do_compare_to_ref and self.acquisition_mode_var == "expert")
         self.compare_to_ref_switch.toggled.connect(self._on_compare_to_ref_toggled)
         validation_layout.addWidget(self.compare_to_ref_switch, 0, 1, Qt.AlignLeft)
 
@@ -1371,6 +1373,28 @@ class Step3Acquisition(StepFrame):
         if checked:
             self.acquisition_mode_var = box.get_id()
             logger.info(f"Mode d'acquisition sélectionné: {self.acquisition_mode_var}")
+
+            # si on est en client disable la comparaison aux références
+            if self.acquisition_mode_var == "client":
+                self.do_compare_to_ref = False
+                # vérifier que le switch est déjà initialisé
+                if hasattr(self, 'compare_to_ref_switch'):
+                    self.compare_to_ref_switch.setCheckable(False)
+                    self.compare_to_ref_switch.setChecked(False)
+                    self.compare_to_ref_switch.setDisabled(True)
+                    self.compare_to_ref_switch.update_style(False)
+                    self.compare_to_ref_switch.setToolTip(
+                        "La comparaison aux références est désactivée en mode client.")
+            else:
+                self.do_compare_to_ref = True
+                # si on est en expert, on active la comparaison aux références
+                if hasattr(self, 'compare_to_ref_switch'):
+                    self.compare_to_ref_switch.setCheckable(True)
+                    self.compare_to_ref_switch.setChecked(True)
+                    self.compare_to_ref_switch.setDisabled(False)
+                    self.compare_to_ref_switch.update_style(True)
+                    self.compare_to_ref_switch.setToolTip("")
+
             # Revalider les dossiers si un chemin a été sélectionné
             if self.results_folder_var or self.reference_folder_var:
                 self._validate_folders()
@@ -2372,8 +2396,7 @@ class Step3Acquisition(StepFrame):
                 ("Ordonnée à l'origine", f"{comp.get('intercept', 0):.4f}", 'intercept'),
                 ("R²", f"{comp.get('r_value', 0):.4f}", 'r2'),
                 ("Points hors tolérance", str(comp.get('nb_puits_loin_fit', 'N/A')), 'nb_puits_loin_fit'),
-                ("Différence relative moyenne", f"{comp.get('diff_mean', 0):.2f}%", None),
-                ("CV de la différence relative", f"{comp.get('diff_cv', 0):.2f}%", None)
+
             ]
 
             for param, value, criteria_key in comp_items:
